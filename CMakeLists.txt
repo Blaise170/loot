@@ -55,6 +55,12 @@ ENDIF ()
 
 find_package(Boost REQUIRED COMPONENTS locale system)
 
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    find_package(ICU REQUIRED COMPONENTS uc)
+    include_directories($ICU_INCLUDE_DIRS)
+    link_directories($ICU_LIBRARY_DIRS)
+endif()
+
 ExternalProject_Add(GTest
                     PREFIX "external"
                     URL "https://github.com/google/googletest/archive/release-1.8.1.tar.gz"
@@ -66,9 +72,13 @@ set (GTEST_LIBRARIES "${BINARY_DIR}/googlemock/gtest/${CMAKE_CFG_INTDIR}/${CMAKE
 
 if (NOT DEFINED LIBLOOT_URL)
     if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-        set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.6/libloot-0.14.6-0-g8fed4b0_dev-win32.7z")
+        if (NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+            set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.7/libloot-0.14.7-0-g1878d48_dev-win32.7z")
+        else()
+            set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.7/libloot-0.14.7-0-g1878d48_dev-win64.7z")
+        endif()
     else()
-        set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.6/libloot.tar.xz")
+        set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.7/libloot.tar.xz")
     endif()
 endif()
 
@@ -104,13 +114,20 @@ ExternalProject_Add(testing-plugins
                     INSTALL_COMMAND "")
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_74.1.16%2Bge20b240%2Bchromium-74.0.3729.131_windows32_minimal.tar.bz2")
-    set(CEF_URL_HASH "44cd67b846185c9f19e58af40a09f68072cd4ea9")
-    set(CEF_PRECOMPILED_BINARIES "libcef.dll" "natives_blob.bin" "snapshot_blob.bin" "v8_context_snapshot.bin" "d3dcompiler_47.dll" "libEGL.dll" "libGLESv2.dll" "chrome_elf.dll")
-    set(CEF_LIB libcef${CMAKE_STATIC_LIBRARY_SUFFIX})
+    if (NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+        set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_3.3440.1806.g65046b7_windows32_minimal.tar.bz2")
+        set(CEF_URL_HASH "cffc227946871d6592f8458daa971899559c133e")
+        set(CEF_PRECOMPILED_BINARIES "libcef.dll" "natives_blob.bin" "snapshot_blob.bin" "v8_context_snapshot.bin" "d3dcompiler_47.dll" "libEGL.dll" "libGLESv2.dll" "chrome_elf.dll")
+        set(CEF_LIB libcef${CMAKE_STATIC_LIBRARY_SUFFIX})
+    else()
+        set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_3.3440.1806.g65046b7_windows64_minimal.tar.bz2")
+        set(CEF_URL_HASH "77f0e569cddb13ed5fa373ece79dc359acaaf4c9")
+        set(CEF_PRECOMPILED_BINARIES "libcef.dll" "natives_blob.bin" "snapshot_blob.bin" "v8_context_snapshot.bin" "d3dcompiler_47.dll" "libEGL.dll" "libGLESv2.dll" "chrome_elf.dll")
+        set(CEF_LIB libcef${CMAKE_STATIC_LIBRARY_SUFFIX})
+    endif()
 ELSE ()
-    set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_74.1.16%2Bge20b240%2Bchromium-74.0.3729.131_linux64_minimal.tar.bz2")
-    set(CEF_URL_HASH "51b729c87bd34636184a5d42943b1139b9b2be21")
+    set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_3.3440.1806.g65046b7_linux64_minimal.tar.bz2")
+    set(CEF_URL_HASH "defe5a9dde8c5616a193e40d1bc0281b2e7e7529")
     set(CEF_PRECOMPILED_BINARIES "libcef.so" "natives_blob.bin" "snapshot_blob.bin" "v8_context_snapshot.bin" "chrome-sandbox")
     set(CEF_LIB libcef${CMAKE_SHARED_LIBRARY_SUFFIX})
 ENDIF()
@@ -253,7 +270,8 @@ set (LOOT_GUI_TESTS_HEADERS "${CMAKE_SOURCE_DIR}/src/gui/helpers.h"
                             "${CMAKE_SOURCE_DIR}/src/tests/gui/state/game/helpers_test.h"
                             "${CMAKE_SOURCE_DIR}/src/tests/gui/state/loot_paths_test.h"
                             "${CMAKE_SOURCE_DIR}/src/tests/gui/state/loot_settings_test.h"
-                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/unapplied_change_counter_test.h")
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/unapplied_change_counter_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/helpers_test.h")
 
 source_group("Header Files\\gui" FILES ${LOOT_GUI_HEADERS})
 source_group("Header Files\\tests" FILES ${LOOT_TESTS_HEADERS})
@@ -323,12 +341,12 @@ ENDIF ()
 # Build application.
 add_executable       (LOOT ${LOOT_GUI_SRC} ${LOOT_GUI_HEADERS})
 add_dependencies     (LOOT cef cpptoml json libloot spdlog)
-target_link_libraries(LOOT ${Boost_LIBRARIES} ${CEF_LIBRARIES} ${LIBLOOT_LINK_LIBRARY} ${LOOT_GUI_LIBS})
+target_link_libraries(LOOT ${Boost_LIBRARIES} ${CEF_LIBRARIES} ${LIBLOOT_LINK_LIBRARY} ${LOOT_GUI_LIBS} ${ICU_LIBRARIES})
 
 # Build application tests.
 add_executable       (loot_gui_tests ${LOOT_GUI_TESTS_SRC} ${LOOT_GUI_TESTS_HEADERS})
 add_dependencies     (loot_gui_tests cpptoml libloot spdlog GTest testing-plugins)
-target_link_libraries(loot_gui_tests ${Boost_LIBRARIES} ${LIBLOOT_LINK_LIBRARY} ${GTEST_LIBRARIES} ${LOOT_TEST_LIBS})
+target_link_libraries(loot_gui_tests ${Boost_LIBRARIES} ${LIBLOOT_LINK_LIBRARY} ${GTEST_LIBRARIES} ${LOOT_TEST_LIBS} ${ICU_LIBRARIES})
 
 ##############################
 # Set Target-Specific Flags
