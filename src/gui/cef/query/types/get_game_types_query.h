@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -30,7 +30,7 @@ along with LOOT.  If not, see
 #include <json.hpp>
 
 #include "gui/cef/query/query.h"
-#include "gui/state/game_settings.h"
+#include "gui/state/game/game_settings.h"
 
 namespace loot {
 class GetGameTypesQuery : public Query {

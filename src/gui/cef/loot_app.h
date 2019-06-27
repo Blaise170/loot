@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -32,13 +32,25 @@
 #include "gui/state/loot_state.h"
 
 namespace loot {
+struct CommandLineOptions {
+#ifdef _WIN32
+  CommandLineOptions();
+#endif
+  CommandLineOptions(int argc, const char *const *argv);
+
+  bool autoSort;
+  std::string defaultGame;
+  std::string lootDataPath;
+  std::string url;
+};
+
 class LootApp : public CefApp,
                 public CefBrowserProcessHandler,
                 public CefRenderProcessHandler {
 public:
-  void Initialise(const std::string& defaultGame,
-                  const std::string& lootDataPath,
-                  const std::string& url);
+  LootApp(CommandLineOptions options);
+
+  std::filesystem::path getL10nPath() const;
 
   // Override CefApp methods.
   virtual void OnBeforeCommandLineProcessing(
@@ -63,9 +75,9 @@ private:
                                 CefRefPtr<CefFrame> frame,
                                 CefRefPtr<CefV8Context> context) OVERRIDE;
 
+  CommandLineOptions commandLineOptions_;
   LootState lootState_;
   CefRefPtr<CefMessageRouterRendererSide> message_router_;
-  std::string url_;
 
   IMPLEMENT_REFCOUNTING(LootApp);
 };

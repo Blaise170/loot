@@ -51,9 +51,9 @@ Thumbs.db
 *.opensdf
 build
 *.mo
-bower_components
 node_modules
 *.pb.h
 *.pb.cc
 coverage/
-index.bower.html
+docs/Pipfile
+docs/Pipfile.lock

@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -30,15 +30,14 @@ along with LOOT.  If not, see
 #include "gui/state/loot_state.h"
 
 namespace loot {
-class CloseSettingsQuery : public GetInstalledGamesQuery {
+class CloseSettingsQuery : public Query {
 public:
   CloseSettingsQuery(LootState& state, nlohmann::json settings) :
-      GetInstalledGamesQuery(state),
       state_(state),
       settings_(settings) {}
 
   std::string executeLogic() {
-    auto logger = state_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->trace(
           "Settings dialog closed and changes accepted, updating "
@@ -54,12 +53,12 @@ public:
     state_.storeGameSettings(
         settings_.value("games", std::vector<GameSettings>()));
 
-    return GetInstalledGamesQuery::executeLogic();
+    return GetInstalledGamesQuery(state_).executeLogic();
   }
 
 private:
   LootState& state_;
-  nlohmann::json settings_;
+  const nlohmann::json settings_;
 };
 }
 

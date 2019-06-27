@@ -1,5 +1,4 @@
 // Depends on the loot.l10n global.
-
 import { closeProgress, showMessage } from './dialog.js';
 
 export default function handlePromiseError(error) {

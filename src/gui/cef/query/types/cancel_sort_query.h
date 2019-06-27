@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -27,43 +27,49 @@ along with LOOT.  If not, see
 
 #include "gui/cef/query/json.h"
 #include "gui/cef/query/types/metadata_query.h"
-#include "gui/state/loot_state.h"
+#include "gui/state/game/game.h"
 
 namespace loot {
-class CancelSortQuery : public MetadataQuery {
+template<typename G = gui::Game>
+class CancelSortQuery : public MetadataQuery<G> {
 public:
-  CancelSortQuery(LootState& state) : MetadataQuery(state), state_(state) {}
+  CancelSortQuery(G& game,
+                  UnappliedChangeCounter& counter,
+                  std::string language) :
+      MetadataQuery<G>(game, language),
+      counter_(counter) {}
 
   std::string executeLogic() {
-    state_.decrementUnappliedChangeCounter();
-    state_.getCurrentGame().DecrementLoadOrderSortCount();
+    counter_.DecrementUnappliedChangeCounter();
+    this->getGame().DecrementLoadOrderSortCount();
 
     nlohmann::json json = {
         {"plugins", nlohmann::json::array()},
-        {"generalMessages", getGeneralMessages()},
+        {"generalMessages", this->getGeneralMessages()},
     };
 
-    std::vector<std::string> loadOrder = state_.getCurrentGame().GetLoadOrder();
+    std::vector<std::string> loadOrder = this->getGame().GetLoadOrder();
     for (const auto& pluginName : loadOrder) {
-      auto plugin = state_.getCurrentGame().GetPlugin(pluginName);
+      auto plugin = this->getGame().GetPlugin(pluginName);
       if (!plugin) {
         continue;
       }
 
-      auto loadOrderIndex = state_.getCurrentGame().GetActiveLoadOrderIndex(
-          plugin, loadOrder);
+      auto loadOrderIndex = this->getGame().GetActiveLoadOrderIndex(plugin, loadOrder);
 
-      json["plugins"].push_back({
-          {"name", pluginName},
-          {"loadOrderIndex", loadOrderIndex},
-      });
+      nlohmann::json pluginJson = {{"name", pluginName}};
+      if (loadOrderIndex.has_value()) {
+        pluginJson["loadOrderIndex"] = loadOrderIndex.value();
+      }
+
+      json["plugins"].push_back(pluginJson);
     }
 
     return json.dump();
   }
 
 private:
-  LootState& state_;
+  UnappliedChangeCounter& counter_;
 };
 }
 

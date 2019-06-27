@@ -1,19 +1,24 @@
+/* eslint-disable no-self-assign */
+
 import Game from '../../../../gui/html/js/game.js';
-import Plugin from '../../../../gui/html/js/plugin.js';
+import { Plugin } from '../../../../gui/html/js/plugin.js';
 
 jest.mock('../../../../gui/html/js/dom.js');
 jest.mock('../../../../gui/html/js/filters.js');
-jest.mock('../../../../gui/html/js/plugin.js', () =>
-  jest.fn().mockImplementation(({ name, crc, isActive, loadOrderIndex }) => ({
-    name,
-    crc,
-    isActive,
-    loadOrderIndex,
-    update(other) {
-      Object.assign(this, other);
-    }
-  }))
-);
+jest.mock('../../../../gui/html/js/plugin.js', () => ({
+  crcToString: jest.fn(),
+  Plugin: jest
+    .fn()
+    .mockImplementation(({ name, crc, isActive, loadOrderIndex }) => ({
+      name,
+      crc,
+      isActive,
+      loadOrderIndex,
+      update(other) {
+        Object.assign(this, other);
+      }
+    }))
+}));
 
 describe('Game', () => {
   const l10n = {
@@ -410,6 +415,36 @@ describe('Game', () => {
       ];
 
       expect(game.getPluginNames()).toEqual(['foo']);
+    });
+  });
+
+  describe('#getGroupPluginNames()', () => {
+    let game;
+
+    beforeEach(() => {
+      const plugins = [
+        {
+          name: 'foo',
+          group: 'test group'
+        },
+        {
+          name: 'bar',
+          group: 'other group'
+        },
+        {
+          name: 'foobar',
+          group: 'test group'
+        }
+      ];
+      game = new Game({ plugins }, l10n);
+    });
+
+    test('should return an empty array if there are no plugins in the given group', () => {
+      expect(game.getGroupPluginNames('empty group').length).toBe(0);
+    });
+
+    test('should return an array of filenames of plugins in the given group', () => {
+      expect(game.getGroupPluginNames('test group')).toEqual(['foo', 'foobar']);
     });
   });
 

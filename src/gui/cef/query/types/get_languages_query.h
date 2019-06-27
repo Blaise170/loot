@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -59,6 +59,7 @@ private:
 
   static std::map<std::string, std::string> getLanguages() {
     return std::map<std::string, std::string>({
+        {"cs", "Čeština"},
         {"da", "Dansk"},
         {"de", "Deutsch"},
         {"en", "English"},

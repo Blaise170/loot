@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2012-2018    WrinklyNinja
+    Copyright (C) 2012 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -22,13 +22,13 @@
     <https://www.gnu.org/licenses/>.
     */
 
-#ifndef LOOT_GUI_STATE_GAME_SETTINGS
-#define LOOT_GUI_STATE_GAME_SETTINGS
+#ifndef LOOT_GUI_STATE_GAME_GAME_SETTINGS
+#define LOOT_GUI_STATE_GAME_GAME_SETTINGS
 
+#include <filesystem>
+#include <optional>
 #include <set>
 #include <string>
-
-#include <boost/filesystem.hpp>
 
 #include "loot/enum/game_type.h"
 
@@ -48,19 +48,23 @@ public:
   std::string Name() const;  // Returns the game's name, eg. "TES IV: Oblivion".
   std::string FolderName() const;
   std::string Master() const;
+  float MinimumHeaderVersion() const;
   std::string RegistryKey() const;
   std::string RepoURL() const;
   std::string RepoBranch() const;
-  boost::filesystem::path GamePath() const;
-  boost::filesystem::path GameLocalPath() const;
+  std::filesystem::path GamePath() const;
+  std::filesystem::path GameLocalPath() const;
 
   GameSettings& SetName(const std::string& name);
   GameSettings& SetMaster(const std::string& masterFile);
+  GameSettings& SetMinimumHeaderVersion(float minimumHeaderVersion);
   GameSettings& SetRegistryKey(const std::string& registry);
   GameSettings& SetRepoURL(const std::string& repositoryURL);
   GameSettings& SetRepoBranch(const std::string& repositoryBranch);
-  GameSettings& SetGamePath(const boost::filesystem::path& path);
-  GameSettings& SetGameLocalPath(const boost::filesystem::path& GameLocalPath);
+  GameSettings& SetGamePath(const std::filesystem::path& path);
+  GameSettings& SetGameLocalPath(const std::filesystem::path& GameLocalPath);
+
+  std::optional<std::filesystem::path> FindGamePath() const;
 
 private:
   static const std::set<std::string> oldDefaultBranches;
@@ -68,6 +72,7 @@ private:
   GameType type_;
   std::string name_;
   std::string masterFile_;
+  float mininumHeaderVersion_;
 
   std::string registryKey_;
 
@@ -76,8 +81,8 @@ private:
   std::string repositoryURL_;
   std::string repositoryBranch_;
 
-  boost::filesystem::path gamePath_;  // Path to the game's folder.
-  boost::filesystem::path gameLocalPath_;
+  std::filesystem::path gamePath_;  // Path to the game's folder.
+  std::filesystem::path gameLocalPath_;
 };
 }
 

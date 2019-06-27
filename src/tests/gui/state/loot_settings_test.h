@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -25,6 +25,8 @@ along with LOOT.  If not, see
 #ifndef LOOT_TESTS_GUI_STATE_LOOT_SETTINGS_TEST
 #define LOOT_TESTS_GUI_STATE_LOOT_SETTINGS_TEST
 
+#include <fstream>
+
 #include "gui/state/loot_settings.h"
 
 #include <gtest/gtest.h>
@@ -39,8 +41,8 @@ protected:
       settingsFile_(lootDataPath / "settings_.toml"),
       unicodeSettingsFile_(lootDataPath / "Andr\xc3\xa9_settings_.toml") {}
 
-  const boost::filesystem::path settingsFile_;
-  const boost::filesystem::path unicodeSettingsFile_;
+  const std::filesystem::path settingsFile_;
+  const std::filesystem::path unicodeSettingsFile_;
   LootSettings settings_;
 };
 
@@ -71,7 +73,6 @@ TEST_P(LootSettingsTest, defaultConstructorShouldSetDefaultValues) {
   EXPECT_FALSE(settings_.isDebugLoggingEnabled());
   EXPECT_TRUE(settings_.updateMasterlist());
   EXPECT_TRUE(settings_.isLootUpdateCheckEnabled());
-  EXPECT_FALSE(settings_.isWindowPositionStored());
   EXPECT_EQ("auto", settings_.getGame());
   EXPECT_EQ("auto", settings_.getLastGame());
   EXPECT_TRUE(settings_.getLastVersion().empty());
@@ -135,7 +136,7 @@ TEST_P(LootSettingsTest, defaultConstructorShouldSetDefaultValues) {
 
 TEST_P(LootSettingsTest, loadingShouldReadFromATomlFile) {
   using std::endl;
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "enableDebugLogging = true" << endl
       << "updateMasterlist = true" << endl
       << "enableLootUpdateCheck = false" << endl
@@ -161,7 +162,7 @@ TEST_P(LootSettingsTest, loadingShouldReadFromATomlFile) {
       << "hideCRCs = true" << endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   EXPECT_TRUE(settings_.isDebugLoggingEnabled());
   EXPECT_TRUE(settings_.updateMasterlist());
@@ -171,11 +172,12 @@ TEST_P(LootSettingsTest, loadingShouldReadFromATomlFile) {
   EXPECT_EQ("0.7.1", settings_.getLastVersion());
   EXPECT_EQ("fr", settings_.getLanguage());
 
-  EXPECT_EQ(1, settings_.getWindowPosition().top);
-  EXPECT_EQ(2, settings_.getWindowPosition().bottom);
-  EXPECT_EQ(3, settings_.getWindowPosition().left);
-  EXPECT_EQ(4, settings_.getWindowPosition().right);
-  EXPECT_TRUE(settings_.getWindowPosition().maximised);
+  ASSERT_TRUE(settings_.getWindowPosition().has_value());
+  EXPECT_EQ(1, settings_.getWindowPosition().value().top);
+  EXPECT_EQ(2, settings_.getWindowPosition().value().bottom);
+  EXPECT_EQ(3, settings_.getWindowPosition().value().left);
+  EXPECT_EQ(4, settings_.getWindowPosition().value().right);
+  EXPECT_TRUE(settings_.getWindowPosition().value().maximised);
 
   EXPECT_EQ("Game Name", settings_.getGameSettings().at(0).Name());
 
@@ -183,25 +185,61 @@ TEST_P(LootSettingsTest, loadingShouldReadFromATomlFile) {
   EXPECT_TRUE(settings_.getFilters().at("hideCRCs"));
 }
 
+TEST_P(LootSettingsTest, loadingShouldSetGameMinimumHeaderVersion) {
+  using std::endl;
+  std::ofstream out(settingsFile_);
+  out << "[[games]]" << endl
+    << "name = \"Game Name\"" << endl
+    << "type = \"Oblivion\"" << endl
+    << "folder = \"Oblivion\"" << endl
+    << "minimumHeaderVersion = 1.0" << endl;
+  out.close();
+
+  settings_.load(settingsFile_, lootDataPath);
+
+  ASSERT_EQ(8, settings_.getGameSettings().size());
+  EXPECT_EQ("Game Name", settings_.getGameSettings()[0].Name());
+  EXPECT_EQ(1.0, settings_.getGameSettings()[0].MinimumHeaderVersion());
+}
+
 TEST_P(LootSettingsTest, loadingShouldHandleNonAsciiPaths) {
   using std::endl;
-  boost::filesystem::ofstream out(unicodeSettingsFile_);
+  std::ofstream out(unicodeSettingsFile_);
   out << "enableDebugLogging = true" << endl
       << "updateMasterlist = true" << endl
       << "game = \"Oblivion\"" << endl;
   out.close();
 
-  settings_.load(unicodeSettingsFile_);
+  settings_.load(unicodeSettingsFile_, lootDataPath);
 
   EXPECT_TRUE(settings_.updateMasterlist());
   EXPECT_TRUE(settings_.isDebugLoggingEnabled());
   EXPECT_EQ("Oblivion", settings_.getGame());
 }
 
+TEST_P(LootSettingsTest, loadingShouldHandleNonAsciiPathsInGameSettings) {
+  using std::endl;
+  std::ofstream out(settingsFile_);
+  out << "[[games]]" << endl
+    << "name = \"Game Name\"" << endl
+    << "type = \"Oblivion\"" << endl
+    << "folder = \"Oblivion\"" << endl
+    << u8"path = \"non\u00C1sciiGamePath\"" << endl
+    << u8"local_path = \"non\u00C1sciiGameLocalPath\"" << endl;
+  out.close();
+
+  settings_.load(settingsFile_, lootDataPath);
+
+  ASSERT_EQ(8, settings_.getGameSettings().size());
+  EXPECT_EQ("Oblivion", settings_.getGameSettings()[0].FolderName());
+  EXPECT_EQ(u8"non\u00C1sciiGamePath", settings_.getGameSettings()[0].GamePath().u8string());
+  EXPECT_EQ(u8"non\u00C1sciiGameLocalPath", settings_.getGameSettings()[0].GameLocalPath().u8string());
+}
+
 TEST_P(LootSettingsTest,
        loadingTomlShouldUpgradeOldDefaultGameRepositoryBranches) {
   using std::endl;
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "[[games]]" << endl
       << "name = \"Game Name\"" << endl
       << "type = \"Oblivion\"" << endl
@@ -209,7 +247,7 @@ TEST_P(LootSettingsTest,
       << "branch = \"v0.7\"" << endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   const std::vector<GameSettings> games({GameSettings(GameType::tes4)});
   EXPECT_NE("v0.7", settings_.getGameSettings()[0].RepoBranch());
@@ -222,7 +260,7 @@ TEST_P(
   const std::vector<GameSettings> games({GameSettings(GameType::tes4)});
 
   using std::endl;
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "[[games]]" << endl
       << "name = \"Game Name\"" << endl
       << "type = \"Oblivion\"" << endl
@@ -230,7 +268,7 @@ TEST_P(
       << "branch = \"foo\"" << endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   EXPECT_EQ("foo", settings_.getGameSettings()[0].RepoBranch());
 }
@@ -238,7 +276,7 @@ TEST_P(
 TEST_P(LootSettingsTest,
        loadingTomlShouldNotUpgradeBranchesForNonDefaultGameRepositories) {
   using std::endl;
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "[[games]]" << endl
       << "name = \"Game Name\"" << endl
       << "type = \"Oblivion\"" << endl
@@ -247,21 +285,21 @@ TEST_P(LootSettingsTest,
       << "branch = \"v0.7\"" << endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   EXPECT_EQ("v0.7", settings_.getGameSettings()[0].RepoBranch());
 }
 
 TEST_P(LootSettingsTest, loadingTomlShouldUpgradeOldSkyrimSEFolderAndType) {
   using std::endl;
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "[[games]]" << endl
       << "name = \"Game Name\"" << endl
       << "type = \"SkyrimSE\"" << endl
       << "folder = \"SkyrimSE\"" << endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   EXPECT_EQ(GameType::tes5se, settings_.getGameSettings()[0].Type());
   EXPECT_EQ("Skyrim Special Edition",
@@ -270,7 +308,7 @@ TEST_P(LootSettingsTest, loadingTomlShouldUpgradeOldSkyrimSEFolderAndType) {
 
 TEST_P(LootSettingsTest, loadingTomlShouldAddMissingBaseGames) {
   using std::endl;
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "[[games]]" << endl
       << "name = \"Game Name\"" << endl
       << "type = \"Oblivion\"" << endl
@@ -278,7 +316,7 @@ TEST_P(LootSettingsTest, loadingTomlShouldAddMissingBaseGames) {
       << "branch = \"foo\"" << endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   GameSettings testGame = GameSettings(GameType::tes4, "Test")
                               .SetName("Game Name")
@@ -301,7 +339,7 @@ TEST_P(LootSettingsTest, loadingTomlShouldAddMissingBaseGames) {
 
 TEST_P(LootSettingsTest, loadingTomlShouldSkipUnrecognisedGames) {
   using std::endl;
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "[[games]]" << endl
       << "name = \"Foobar\"" << endl
       << "type = \"Foobar\"" << endl
@@ -312,17 +350,17 @@ TEST_P(LootSettingsTest, loadingTomlShouldSkipUnrecognisedGames) {
       << "folder = \"Oblivion\"" << endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   EXPECT_EQ("Game Name", settings_.getGameSettings()[0].Name());
 }
 
 TEST_P(LootSettingsTest, loadingTomlShouldRemoveTheContentFilterSetting) {
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "[filters]" << std::endl << "contentFilter = \"foo\"" << std::endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
 
   EXPECT_TRUE(settings_.getFilters().empty());
 }
@@ -339,7 +377,7 @@ TEST_P(LootSettingsTest, saveShouldWriteSettingsToPassedTomlFile) {
   windowPosition.right = 4;
   windowPosition.maximised = true;
   const std::vector<GameSettings> games({
-      GameSettings(GameType::tes4).SetName("Game Name"),
+      GameSettings(GameType::tes4).SetName("Game Name").SetMinimumHeaderVersion(2.5),
   });
   const std::map<std::string, bool> filters({
       {"hideBashTags", false},
@@ -362,7 +400,7 @@ TEST_P(LootSettingsTest, saveShouldWriteSettingsToPassedTomlFile) {
   settings_.save(settingsFile_);
 
   LootSettings settings;
-  settings.load(settingsFile_);
+  settings.load(settingsFile_, lootDataPath);
 
   EXPECT_TRUE(settings.isDebugLoggingEnabled());
   EXPECT_TRUE(settings.updateMasterlist());
@@ -371,59 +409,35 @@ TEST_P(LootSettingsTest, saveShouldWriteSettingsToPassedTomlFile) {
   EXPECT_EQ(lastGame, settings.getLastGame());
   EXPECT_EQ(language, settings.getLanguage());
 
-  EXPECT_EQ(1, settings.getWindowPosition().top);
-  EXPECT_EQ(2, settings.getWindowPosition().bottom);
-  EXPECT_EQ(3, settings.getWindowPosition().left);
-  EXPECT_EQ(4, settings.getWindowPosition().right);
-  EXPECT_TRUE(settings.getWindowPosition().maximised);
+  ASSERT_TRUE(settings_.getWindowPosition().has_value());
+  EXPECT_EQ(1, settings_.getWindowPosition().value().top);
+  EXPECT_EQ(2, settings.getWindowPosition().value().bottom);
+  EXPECT_EQ(3, settings.getWindowPosition().value().left);
+  EXPECT_EQ(4, settings.getWindowPosition().value().right);
+  EXPECT_TRUE(settings.getWindowPosition().value().maximised);
 
   EXPECT_EQ(games[0].Name(), settings.getGameSettings().at(0).Name());
+  EXPECT_EQ(games[0].MinimumHeaderVersion(), settings.getGameSettings().at(0).MinimumHeaderVersion());
 
   EXPECT_EQ(filters, settings.getFilters());
 }
 
-TEST_P(LootSettingsTest,
-       isWindowPositionStoredShouldReturnFalseIfAllPositionValuesAreZero) {
-  LootSettings::WindowPosition position;
-  settings_.storeWindowPosition(position);
+TEST_P(LootSettingsTest, saveShouldWriteNonAsciiPathsAsUtf8) {
+  using std::filesystem::u8path;
+  settings_.storeGameSettings({
+      GameSettings(GameType::tes4)
+      .SetGamePath(u8path(u8"non\u00C1sciiGamePath"))
+    .SetGameLocalPath(u8path(u8"non\u00C1sciiGameLocalPath"))
+    });
+  settings_.save(settingsFile_);
 
-  EXPECT_FALSE(settings_.isWindowPositionStored());
-}
+  std::ifstream in(settingsFile_);
+  std::stringstream buffer;
+  buffer << in.rdbuf();
+  std::string contents = buffer.str();
 
-TEST_P(LootSettingsTest,
-       isWindowPositionStoredShouldReturnTrueIfTopPositionValueIsNonZero) {
-  LootSettings::WindowPosition position;
-  position.top = 1;
-  settings_.storeWindowPosition(position);
-
-  EXPECT_TRUE(settings_.isWindowPositionStored());
-}
-
-TEST_P(LootSettingsTest,
-       isWindowPositionStoredShouldReturnTrueIfBottomPositionValueIsNonZero) {
-  LootSettings::WindowPosition position;
-  position.bottom = 1;
-  settings_.storeWindowPosition(position);
-
-  EXPECT_TRUE(settings_.isWindowPositionStored());
-}
-
-TEST_P(LootSettingsTest,
-       isWindowPositionStoredShouldReturnTrueIfLeftPositionValueIsNonZero) {
-  LootSettings::WindowPosition position;
-  position.left = 1;
-  settings_.storeWindowPosition(position);
-
-  EXPECT_TRUE(settings_.isWindowPositionStored());
-}
-
-TEST_P(LootSettingsTest,
-       isWindowPositionStoredShouldReturnTrueIfRightPositionValueIsNonZero) {
-  LootSettings::WindowPosition position;
-  position.right = 1;
-  settings_.storeWindowPosition(position);
-
-  EXPECT_TRUE(settings_.isWindowPositionStored());
+  EXPECT_NE(std::string::npos, contents.find(u8"non\u00C1sciiGamePath"));
+  EXPECT_NE(std::string::npos, contents.find(u8"non\u00C1sciiGameLocalPath"));
 }
 
 TEST_P(LootSettingsTest, storeGameSettingsShouldReplaceExistingGameSettings) {
@@ -444,7 +458,8 @@ TEST_P(LootSettingsTest, storeWindowPositionShouldReplaceExistingValue) {
   expectedPosition.top = 1;
   settings_.storeWindowPosition(expectedPosition);
 
-  LootSettings::WindowPosition actualPosition = settings_.getWindowPosition();
+  ASSERT_TRUE(settings_.getWindowPosition().has_value());
+  LootSettings::WindowPosition actualPosition = settings_.getWindowPosition().value();
   EXPECT_EQ(expectedPosition.top, actualPosition.top);
   EXPECT_EQ(expectedPosition.bottom, actualPosition.bottom);
   EXPECT_EQ(expectedPosition.left, actualPosition.left);
@@ -454,11 +469,11 @@ TEST_P(LootSettingsTest, storeWindowPositionShouldReplaceExistingValue) {
 TEST_P(LootSettingsTest, updateLastVersionShouldSetValueToCurrentLootVersion) {
   const std::string currentVersion = gui::Version::string();
 
-  boost::filesystem::ofstream out(settingsFile_);
+  std::ofstream out(settingsFile_);
   out << "lastVersion = \"0.7.1\"" << std::endl;
   out.close();
 
-  settings_.load(settingsFile_);
+  settings_.load(settingsFile_, lootDataPath);
   settings_.updateLastVersion();
 
   EXPECT_EQ(currentVersion, settings_.getLastVersion());

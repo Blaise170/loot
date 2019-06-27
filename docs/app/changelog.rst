@@ -4,6 +4,221 @@ Version History
 
 Only application history is recorded here. A full history of masterlist changes may be viewed by browsing the GitHub repositories.
 
+0.14.4 - 2019-05-11
+===================
+
+Fixed
+-----
+
+- Any instances of ``\.`` in messages would be incorrectly displayed as ``.``.
+- LOOT would unnecessarily ignore intermediate plugins in a non-master to master
+  cycle involving groups, leading to unexpected results when sorting plugins
+  (via libloot).
+- ``HearthFires.esm`` was not recognised as a hardcoded plugin on case-sensitive
+  filesystems, causing a cyclic interaction error when sorting Skyrim or Skyrim
+  SE (via libloot).
+
+Changed
+-------
+
+- Groups that contain installed plugins can no longer be deleted in the groups
+  editor.
+- Clicking on a group in the groups editor will now display a list of the
+  installed plugins in that group in the editor's sidebar.
+- An error message is now displayed for each plugin that belongs to a
+  nonexistent group.
+- Game configuration can now include the root Registry key when specifying a
+  registry key. If no root key is specified, ``HKEY_LOCAL_MACHINE`` is used. The
+  recognised root keys are:
+
+  - ``HKEY_CLASSES_ROOT``
+  - ``HKEY_CURRENT_CONFIG``
+  - ``HKEY_CURRENT_USER``
+  - ``HKEY_LOCAL_MACHINE``
+  - ``HKEY_USERS``
+
+- Updated the Russian translation.
+- Updated libloot to v0.14.6.
+- Updated CEF to v74.1.16+ge20b240+chromium-74.0.3729.131.
+- Updated nlohmann/json to v3.6.1.
+- Updated spdlog to v1.3.1.
+
+0.14.3 - 2019-02-10
+===================
+
+Fixed
+-----
+
+- Plugin counters would be set to zero after cancelling a load order sort.
+- The user interface would not display default values for some data if
+  overriding values were removed (e.g. removing a plugin's user metadata would
+  not set its group back to the default if no group was set in the masterlist).
+- Saving user metadata with the default group would store that group membership
+  in user metadata even if the plugin was already in the default group.
+- Condition parsing now errors if it does not consume the whole condition
+  string, so invalid syntax is not silently ignored (via libloot).
+- Conditions were not parsed past the first instance of ``file(<regex>)``,
+  ``active(<regex>)``, ``many(<regex>)`` or ``many_active(<regex>)``
+  (via libloot).
+- LOOT could crash on startup or changing game when trying to check if the game
+  or data paths are symlinks. If a check fails, LOOT will now assume the path is
+  not a symlink. Via libloot.
+
+Changed
+-------
+
+- Updated libloot to v0.14.4.
+
+0.14.2 - 2019-01-20
+===================
+
+Fixed
+-----
+
+- An error when loading plugins with a file present in the plugins directory
+  that has a filename containing characters that cannot be represented in the
+  system code page. Via libloot.
+- An error when trying to read the version of an executable that does not have
+  a US English version information resource. Executable versions are now read
+  from the file's first version information resource, whatever its language.
+  Via libloot.
+
+Changed
+-------
+
+- Updated libloot to 0.14.2.
+
+0.14.1 - 2019-01-19
+===================
+
+Fixed
+-----
+
+- The LOOT update checker would fail when LOOT's version number was equal to the
+  version number of the latest release.
+
+0.14.0 - 2019-01-19
+===================
+
+Added
+-----
+
+- An error message will now be displayed for any light plugin that contains new
+  records with FormIDs outside the valid range for light plugins.
+- A warning message will now be displayed for any plugin that has a header
+  version that is older than is used by the game, to help draw attention to
+  plugins that have been incorrectly ported from older games. The header version
+  checked is the value of the version field in the ``HEDR`` subrecord of the
+  plugin's ``TES4`` record.
+- A section to the documentation that explains LOOT's sorting algorithm.
+
+Fixed
+-----
+
+- Creating a new group by pressing the Enter key after typing a name in the
+  Groups Editor input field no longer leaves the group creation button enabled.
+- Incorrect handling of non-ASCII characters in plugin filenames when getting
+  their active load order indices, which could lead to incorrect indices being
+  displayed in the sidebar.
+- Incorrect handling of non-ASCII characters in games' LOOT folder names. By
+  default all folder names only contained ASCII characters, so this would only
+  affect customised folder names.
+- BSAs/BA2s loaded by non-ASCII plugins for Oblivion, Fallout 3, Fallout: New
+  Vegas and Fallout 4 may not have been detected due to incorrect
+  case-insensitivity handling (via LOOT API).
+- Fixed incorrect case-insensitivity handling for non-ASCII plugin filenames and
+  File metadata names (via LOOT API).
+- Path equivalence checks could be inaccurate as they were using
+  case-insensitive string comparisons, which may not match filesystem behaviour.
+  Filesystem equivalence checks are now used to improve correctness. (Via LOOT
+  API).
+- Errors due to filesystem permissions when cloning a new masterlist repository
+  into an existing game directory. Deleting the temporary directory is now
+  deferred until after its contents have been copied into the game directory,
+  and if an error is encountered when deleting the temporary directory, it is
+  logged but does not cause the masterlist update to fail. (Via LOOT API).
+- The Czech translation mangled placeholders in message strings, causing errors
+  when it was used.
+
+Changed
+-------
+
+- LOOT now requires a C++17-compatible compiler, so Windows builds now require
+  the MSVC 2017 x86 redistributable instead of the MSVC 2015 x86
+  redistributable.
+- The masterlist or default group for a plugin in the plugin editor's group
+  dropdown is now styled with bold dark blue text to make it easier to undo user
+  customisation of a plugin's group.
+- Cyclic interaction errors will now detail the data source of each interaction
+  in the cyclic path, to make it easier to identify the problematic metadata and
+  so fix it.
+- Updated the Japanese translation.
+- Updated the German translation.
+- LOOT now supports v0.14 of the metadata syntax (via LOOT API).
+- Updated LOOT API, which has been renamed to libloot, to 0.14.1.
+- Updated cpptoml to v0.1.1.
+- Updated spdlog to v1.3.0.
+- Updated nlohmann/json to v3.5.0.
+- Updated JavaScript GUI dependencies.
+
+0.13.6 - 2018-11-27
+===================
+
+Fixed
+-----
+
+- Load order indices in the sidebar were formatted incorrectly for light
+  plugins.
+
+0.13.5 - 2018-11-26
+===================
+
+Fixed
+-----
+
+- Out-of-bounds memory read that caused corruption in LOOT's ``settings.toml``
+  when LOOT is closed after having been unable to find any installed games.
+
+Added
+-----
+
+- An ``--auto-sort`` parameter that can be passed to ``LOOT.exe`` with
+  ``--game``, and which will cause LOOT to automatically sort the game's load
+  order and apply the sorted load order, then quit. If an error is encountered
+  at any point, auto-sort is cancelled.
+- A Czech translation by ThePotatoChronicler.
+- A documentation section that describes the sorting algorithm.
+
+Changed
+-------
+
+- Passing an invalid ``--game`` value as a parameter to ``LOOT.exe`` now causes
+  an error to be displayed.
+- The Groups Editor now uses a left-to-right layout when displaying the groups
+  graph, which is clearer and more consistent than the previous layout.
+- Updated GUI dependencies.
+- Updated Japanese translation.
+
+0.13.4 - 2018-09-25
+===================
+
+Fixed
+-----
+
+- Warnings were displayed for ghosted plugins saying they were invalid and would
+  be ignored when they were not.
+- Filesystem errors when trying to set permissions during a masterlist update
+  that clones a new repository (via LOOT API).
+
+Changed
+-------
+
+- The Group dropdown menu in the metadata editor now "drops up" to reduce the
+  amount of scrolling necesary by default to see the full list.
+- The GUI is now based on a mix of Polymer 3 and React elements.
+- Updated GUI dependencies.
+- Updated LOOT API to v0.13.8.
+
 0.13.3 - 2018-09-11
 ===================
 

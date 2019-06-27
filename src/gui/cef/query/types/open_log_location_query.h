@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -32,15 +32,20 @@ along with LOOT.  If not, see
 namespace loot {
 class OpenLogLocationQuery : public Query {
 public:
+  OpenLogLocationQuery(std::filesystem::path logPath) : logPath_(logPath) {}
+
   std::string executeLogic() {
     auto logger = getLogger();
     if (logger) {
       logger->info("Opening LOOT's local appdata folder.");
     }
-    OpenInDefaultApplication(LootPaths::getLogPath().parent_path());
+    OpenInDefaultApplication(logPath_.parent_path());
 
     return "";
   }
+
+private:
+  const std::filesystem::path logPath_;
 };
 }
 

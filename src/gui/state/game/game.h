@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2012-2018    WrinklyNinja
+    Copyright (C) 2012 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -22,19 +22,20 @@
     <https://www.gnu.org/licenses/>.
     */
 
-#ifndef LOOT_GUI_STATE_GAME
-#define LOOT_GUI_STATE_GAME
+#ifndef LOOT_GUI_STATE_GAME_GAME
+#define LOOT_GUI_STATE_GAME_GAME
 
 #define FMT_NO_FMT_STRING_ALIAS
 
+#include <filesystem>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_set>
 
-#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
-#include "gui/state/game_settings.h"
+#include "gui/state/game/game_settings.h"
 #include "loot/api.h"
 
 namespace loot {
@@ -42,15 +43,13 @@ namespace gui {
 class Game : public GameSettings {
 public:
   Game(const GameSettings& gameSettings,
-       const boost::filesystem::path& lootDataPath);
+       const std::filesystem::path& lootDataPath);
   Game(const Game& game);
 
   Game& operator=(const Game& game);
 
   using GameSettings::Type;
 
-  static bool IsInstalled(const GameSettings& gameSettings);
-  static Message ToMessage(const PluginCleaningData& cleaningData);
   void Init();
 
   std::shared_ptr<const PluginInterface> GetPlugin(
@@ -67,15 +66,16 @@ public:
   bool ArePluginsFullyLoaded()
       const;  // Checks if the game's plugins have already been loaded.
 
-  boost::filesystem::path DataPath() const;
-  boost::filesystem::path MasterlistPath() const;
-  boost::filesystem::path UserlistPath() const;
+  std::filesystem::path DataPath() const;
+  std::filesystem::path MasterlistPath() const;
+  std::filesystem::path UserlistPath() const;
+  std::filesystem::path PluginsTxtPath() const;
 
   std::vector<std::string> GetLoadOrder() const;
   void SetLoadOrder(const std::vector<std::string>& loadOrder);
 
   bool IsPluginActive(const std::string& pluginName) const;
-  short GetActiveLoadOrderIndex(
+  std::optional<short> GetActiveLoadOrderIndex(
       const std::shared_ptr<const PluginInterface>& plugin,
       const std::vector<std::string>& loadOrder) const;
 
@@ -96,10 +96,12 @@ public:
   std::unordered_set<Group> GetMasterlistGroups() const;
   std::unordered_set<Group> GetUserGroups() const;
 
-  PluginMetadata GetMasterlistMetadata(const std::string& pluginName,
-                                       bool evaluateConditions = false) const;
-  PluginMetadata GetUserMetadata(const std::string& pluginName,
-                                 bool evaluateConditions = false) const;
+  std::optional<PluginMetadata> GetMasterlistMetadata(
+      const std::string& pluginName,
+      bool evaluateConditions = false) const;
+  std::optional<PluginMetadata> GetUserMetadata(
+      const std::string& pluginName,
+      bool evaluateConditions = false) const;
 
   void SetUserGroups(const std::unordered_set<Group>& groups);
   void AddUserMetadata(const PluginMetadata& metadata);
@@ -108,30 +110,14 @@ public:
   void SaveUserMetadata();
 
 private:
-#ifdef _WIN32
-  static std::string RegKeyStringValue(const std::string& keyStr,
-                                       const std::string& subkey,
-                                       const std::string& value);
-#endif
-  static bool ExecutableExists(const GameType& gameType,
-                               const boost::filesystem::path& gamePath);
-  static boost::filesystem::path DetectGamePath(
-      const GameSettings& gameSettings);
-  static void BackupLoadOrder(const std::vector<std::string>& loadOrder,
-                              const boost::filesystem::path& backupDirectory);
   std::vector<std::string> GetInstalledPluginNames();
-  void warnAboutRemovedPlugins(const std::vector<std::string> pluginsBefore,
-                               const std::vector<std::string> pluginsAfter);
-
-  boost::filesystem::path lootDataPath_;
+  void AppendMessages(std::vector<Message> messages);
 
   std::shared_ptr<GameInterface> gameHandle_;
-  bool pluginsFullyLoaded_;
-
   std::vector<Message> messages_;
+  std::filesystem::path lootDataPath_;
   unsigned short loadOrderSortCount_;
-
-  std::shared_ptr<spdlog::logger> logger_;
+  bool pluginsFullyLoaded_;
 
   mutable std::mutex mutex_;
 };

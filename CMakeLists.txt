@@ -11,6 +11,10 @@ ELSE()
     set (MSVC_SHARED_RUNTIME ON)
 ENDIF()
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 ##############################
 # Get Build Revision
 ##############################
@@ -49,7 +53,13 @@ IF (NOT Boost_USE_STATIC_LIBS)
     add_definitions(-DBOOST_LOG_DYN_LINK)
 ENDIF ()
 
-find_package(Boost REQUIRED COMPONENTS locale filesystem system)
+find_package(Boost REQUIRED COMPONENTS locale system)
+
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    find_package(ICU REQUIRED COMPONENTS uc)
+    include_directories($ICU_INCLUDE_DIRS)
+    link_directories($ICU_LIBRARY_DIRS)
+endif()
 
 ExternalProject_Add(GTest
                     PREFIX "external"
@@ -60,48 +70,61 @@ ExternalProject_Get_Property(GTest SOURCE_DIR BINARY_DIR)
 set (GTEST_INCLUDE_DIRS "${SOURCE_DIR}/googletest/include")
 set (GTEST_LIBRARIES "${BINARY_DIR}/googlemock/gtest/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    set(LOOT_API_URL "https://github.com/loot/loot-api/releases/download/0.13.7/loot_api-0.13.7-0-g3a747b8_dev-win32.7z")
-else()
-    set(LOOT_API_URL "https://github.com/loot/loot-api/releases/download/0.13.7/loot-api.tar.xz")
+if (NOT DEFINED LIBLOOT_URL)
+    if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+        if (NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+            set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.7/libloot-0.14.7-0-g1878d48_dev-win32.7z")
+        else()
+            set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.7/libloot-0.14.7-0-g1878d48_dev-win64.7z")
+        endif()
+    else()
+        set(LIBLOOT_URL "https://github.com/loot/libloot/releases/download/0.14.7/libloot.tar.xz")
+    endif()
 endif()
 
 ExternalProject_Add(json
                     PREFIX "external"
-                    URL "https://github.com/nlohmann/json/releases/download/v3.2.0/json.hpp"
+                    URL "https://github.com/nlohmann/json/releases/download/v3.6.1/json.hpp"
                     DOWNLOAD_NO_EXTRACT 1
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
                     INSTALL_COMMAND "")
 set(JSON_INCLUDE_DIRS "${CMAKE_BINARY_DIR}/external/src")
 
-ExternalProject_Add(loot_api
+ExternalProject_Add(libloot
                     PREFIX "external"
-                    URL ${LOOT_API_URL}
+                    URL ${LIBLOOT_URL}
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
                     INSTALL_COMMAND "")
-ExternalProject_Get_Property(loot_api SOURCE_DIR)
-set(LOOT_API_EXTRACTED_PATH ${SOURCE_DIR})
+ExternalProject_Get_Property(libloot SOURCE_DIR)
+set(LIBLOOT_EXTRACTED_PATH ${SOURCE_DIR})
 
 include_directories("${CMAKE_SOURCE_DIR}/src"
-                    "${LOOT_API_EXTRACTED_PATH}/include")
-link_directories(${LOOT_API_EXTRACTED_PATH})
-set(LOOT_API_STATIC_LIBRARY "${CMAKE_STATIC_LIBRARY_PREFIX}loot_api${CMAKE_STATIC_LIBRARY_SUFFIX}")
-set(LOOT_API_SHARED_LIBRARY "${CMAKE_SHARED_LIBRARY_PREFIX}loot_api${CMAKE_SHARED_LIBRARY_SUFFIX}")
+                    "${LIBLOOT_EXTRACTED_PATH}/include")
+link_directories(${LIBLOOT_EXTRACTED_PATH})
+set(LIBLOOT_STATIC_LIBRARY "${CMAKE_STATIC_LIBRARY_PREFIX}loot${CMAKE_STATIC_LIBRARY_SUFFIX}")
+set(LIBLOOT_SHARED_LIBRARY "${CMAKE_SHARED_LIBRARY_PREFIX}loot${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
 ExternalProject_Add(testing-plugins
                     PREFIX "external"
-                    URL "https://github.com/WrinklyNinja/testing-plugins/archive/1.0.0.tar.gz"
+                    URL "https://github.com/Ortham/testing-plugins/archive/1.0.0.tar.gz"
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
                     INSTALL_COMMAND "")
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_3.3440.1806.g65046b7_windows32_minimal.tar.bz2")
-    set(CEF_URL_HASH "cffc227946871d6592f8458daa971899559c133e")
-    set(CEF_PRECOMPILED_BINARIES "libcef.dll" "natives_blob.bin" "snapshot_blob.bin" "v8_context_snapshot.bin" "d3dcompiler_47.dll" "libEGL.dll" "libGLESv2.dll" "chrome_elf.dll")
-    set(CEF_LIB libcef${CMAKE_STATIC_LIBRARY_SUFFIX})
+    if (NOT "${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+        set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_3.3440.1806.g65046b7_windows32_minimal.tar.bz2")
+        set(CEF_URL_HASH "cffc227946871d6592f8458daa971899559c133e")
+        set(CEF_PRECOMPILED_BINARIES "libcef.dll" "natives_blob.bin" "snapshot_blob.bin" "v8_context_snapshot.bin" "d3dcompiler_47.dll" "libEGL.dll" "libGLESv2.dll" "chrome_elf.dll")
+        set(CEF_LIB libcef${CMAKE_STATIC_LIBRARY_SUFFIX})
+    else()
+        set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_3.3440.1806.g65046b7_windows64_minimal.tar.bz2")
+        set(CEF_URL_HASH "77f0e569cddb13ed5fa373ece79dc359acaaf4c9")
+        set(CEF_PRECOMPILED_BINARIES "libcef.dll" "natives_blob.bin" "snapshot_blob.bin" "v8_context_snapshot.bin" "d3dcompiler_47.dll" "libEGL.dll" "libGLESv2.dll" "chrome_elf.dll")
+        set(CEF_LIB libcef${CMAKE_STATIC_LIBRARY_SUFFIX})
+    endif()
 ELSE ()
     set(CEF_URL "http://opensource.spotify.com/cefbuilds/cef_binary_3.3440.1806.g65046b7_linux64_minimal.tar.bz2")
     set(CEF_URL_HASH "defe5a9dde8c5616a193e40d1bc0281b2e7e7529")
@@ -132,7 +155,7 @@ set(CEF_PRECOMPILED_BINARIES_DIR "${SOURCE_DIR}/Release")
 
 ExternalProject_Add(cpptoml
                     PREFIX "external"
-                    URL "https://github.com/skystrife/cpptoml/archive/v0.1.0.tar.gz"
+                    URL "https://github.com/skystrife/cpptoml/archive/v0.1.1.tar.gz"
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
                     INSTALL_COMMAND "")
@@ -141,7 +164,7 @@ set(CPPTOML_INCLUDE_DIRS "${SOURCE_DIR}/include")
 
 ExternalProject_Add(spdlog
                     PREFIX "external"
-                    URL "https://github.com/gabime/spdlog/archive/v1.1.0.tar.gz"
+                    URL "https://github.com/gabime/spdlog/archive/v1.3.1.tar.gz"
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
                     INSTALL_COMMAND "")
@@ -160,8 +183,10 @@ set (LOOT_GUI_SRC "${CMAKE_BINARY_DIR}/generated/version.cpp"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/loot_scheme_handler_factory.cpp"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/window_delegate.cpp"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/query_handler.cpp"
-                  "${CMAKE_SOURCE_DIR}/src/gui/state/game.cpp"
-                  "${CMAKE_SOURCE_DIR}/src/gui/state/game_settings.cpp"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/game.cpp"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/game_settings.cpp"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/helpers.cpp"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/logging.cpp"
                   "${CMAKE_SOURCE_DIR}/src/gui/state/loot_paths.cpp"
                   "${CMAKE_SOURCE_DIR}/src/gui/state/loot_settings.cpp"
                   "${CMAKE_SOURCE_DIR}/src/gui/state/loot_state.cpp"
@@ -175,8 +200,8 @@ set (LOOT_GUI_HEADERS "${CMAKE_SOURCE_DIR}/src/gui/helpers.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/derived_plugin_metadata.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/json.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/query.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/cef/query/query_executor.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/apply_sort_query.h"
-                  "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/cancel_find_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/cancel_sort_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/change_game_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/clear_all_metadata_query.h"
@@ -189,6 +214,7 @@ set (LOOT_GUI_HEADERS "${CMAKE_SOURCE_DIR}/src/gui/helpers.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/discard_unapplied_changes_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/editor_opened_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/editor_closed_query.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/get_auto_sort_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/get_conflicting_plugins_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/get_game_data_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/get_game_types_query.h"
@@ -206,36 +232,46 @@ set (LOOT_GUI_HEADERS "${CMAKE_SOURCE_DIR}/src/gui/helpers.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/sort_plugins_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/types/update_masterlist_query.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/cef/query/query_handler.h"
-                  "${CMAKE_SOURCE_DIR}/src/gui/state/game.h"
-                  "${CMAKE_SOURCE_DIR}/src/gui/state/game_detection_error.h"
-                  "${CMAKE_SOURCE_DIR}/src/gui/state/game_settings.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/game.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/game_detection_error.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/game_settings.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/games_manager.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/game/helpers.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/state/logging.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/state/loot_paths.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/state/loot_settings.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/state/loot_state.h"
+                  "${CMAKE_SOURCE_DIR}/src/gui/state/unapplied_change_counter.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/resource.h"
                   "${CMAKE_SOURCE_DIR}/src/gui/version.h")
 
 set(LOOT_GUI_TESTS_SRC "${CMAKE_BINARY_DIR}/generated/version.cpp"
                        "${CMAKE_SOURCE_DIR}/src/gui/helpers.cpp"
-                       "${CMAKE_SOURCE_DIR}/src/gui/state/game.cpp"
-                       "${CMAKE_SOURCE_DIR}/src/gui/state/game_settings.cpp"
+                       "${CMAKE_SOURCE_DIR}/src/gui/state/game/game.cpp"
+                       "${CMAKE_SOURCE_DIR}/src/gui/state/game/game_settings.cpp"
+                       "${CMAKE_SOURCE_DIR}/src/gui/state/game/helpers.cpp"
+                       "${CMAKE_SOURCE_DIR}/src/gui/state/logging.cpp"
                        "${CMAKE_SOURCE_DIR}/src/gui/state/loot_paths.cpp"
                        "${CMAKE_SOURCE_DIR}/src/gui/state/loot_settings.cpp"
                        "${CMAKE_SOURCE_DIR}/src/gui/state/loot_state.cpp"
                        "${CMAKE_SOURCE_DIR}/src/tests/gui/main.cpp")
 
 set (LOOT_GUI_TESTS_HEADERS "${CMAKE_SOURCE_DIR}/src/gui/helpers.h"
-                            "${CMAKE_SOURCE_DIR}/src/gui/state/game.h"
-                            "${CMAKE_SOURCE_DIR}/src/gui/state/game_settings.h"
+                            "${CMAKE_SOURCE_DIR}/src/gui/state/game/game.h"
+                            "${CMAKE_SOURCE_DIR}/src/gui/state/game/game_settings.h"
                             "${CMAKE_SOURCE_DIR}/src/gui/state/loot_paths.h"
                             "${CMAKE_SOURCE_DIR}/src/gui/state/loot_settings.h"
                             "${CMAKE_SOURCE_DIR}/src/gui/state/loot_state.h"
-                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/game_test.h"
-                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/game_settings_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/cef/query/json_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/cef/query/types/editor_closed_query_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/game/game_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/game/game_settings_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/game/games_manager_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/game/helpers_test.h"
                             "${CMAKE_SOURCE_DIR}/src/tests/gui/state/loot_paths_test.h"
                             "${CMAKE_SOURCE_DIR}/src/tests/gui/state/loot_settings_test.h"
-                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/loot_state_test.h")
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/state/unapplied_change_counter_test.h"
+                            "${CMAKE_SOURCE_DIR}/src/tests/gui/helpers_test.h")
 
 source_group("Header Files\\gui" FILES ${LOOT_GUI_HEADERS})
 source_group("Header Files\\tests" FILES ${LOOT_TESTS_HEADERS})
@@ -261,22 +297,24 @@ include_directories ("${CMAKE_SOURCE_DIR}/src"
 # Settings when compiling for Windows.
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_definitions (-DUNICODE -D_UNICODE)
-    set(LOOT_API_LINK_LIBRARY ${LOOT_API_STATIC_LIBRARY})
+    set(LIBLOOT_LINK_LIBRARY ${LIBLOOT_STATIC_LIBRARY})
 else()
-    set(LOOT_API_LINK_LIBRARY ${LOOT_API_SHARED_LIBRARY})
+    set(LIBLOOT_LINK_LIBRARY ${LIBLOOT_SHARED_LIBRARY})
 endif()
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
     set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};.")
     set (CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -std=c++14")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++14")
 
-    set (LOOT_GUI_LIBS X11 pthread http_parser ssh2)
-    set (LOOT_TEST_LIBS pthread http_parser ssh2)
+    set (LOOT_LIBS pthread http_parser ssh2 stdc++fs)
+    set (LOOT_GUI_LIBS X11 ${LOOT_LIBS})
+    set (LOOT_TEST_LIBS ${LOOT_LIBS})
 ENDIF ()
 
 IF (MSVC)
+    # Turn off permissive mode to be more standards-compliant and avoid compiler errors.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+
     # Set /bigobj to allow building Debug tests
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /bigobj")
 
@@ -302,13 +340,13 @@ ENDIF ()
 
 # Build application.
 add_executable       (LOOT ${LOOT_GUI_SRC} ${LOOT_GUI_HEADERS})
-add_dependencies     (LOOT cef cpptoml json loot_api spdlog)
-target_link_libraries(LOOT ${Boost_LIBRARIES} ${CEF_LIBRARIES} ${LOOT_API_LINK_LIBRARY} ${LOOT_GUI_LIBS})
+add_dependencies     (LOOT cef cpptoml json libloot spdlog)
+target_link_libraries(LOOT ${Boost_LIBRARIES} ${CEF_LIBRARIES} ${LIBLOOT_LINK_LIBRARY} ${LOOT_GUI_LIBS} ${ICU_LIBRARIES})
 
 # Build application tests.
 add_executable       (loot_gui_tests ${LOOT_GUI_TESTS_SRC} ${LOOT_GUI_TESTS_HEADERS})
-add_dependencies     (loot_gui_tests cpptoml loot_api spdlog GTest testing-plugins)
-target_link_libraries(loot_gui_tests ${Boost_LIBRARIES} ${LOOT_API_LINK_LIBRARY} ${GTEST_LIBRARIES} ${LOOT_TEST_LIBS})
+add_dependencies     (loot_gui_tests cpptoml libloot spdlog GTest testing-plugins)
+target_link_libraries(loot_gui_tests ${Boost_LIBRARIES} ${LIBLOOT_LINK_LIBRARY} ${GTEST_LIBRARIES} ${LOOT_TEST_LIBS} ${ICU_LIBRARIES})
 
 ##############################
 # Set Target-Specific Flags
@@ -361,12 +399,12 @@ add_custom_command(TARGET LOOT POST_BUILD
 # Copy the API binary to the build directory.
 add_custom_command(TARGET LOOT POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${LOOT_API_EXTRACTED_PATH}/${LOOT_API_SHARED_LIBRARY}"
-        "$<TARGET_FILE_DIR:LOOT>/${LOOT_API_SHARED_LIBRARY}")
+        "${LIBLOOT_EXTRACTED_PATH}/${LIBLOOT_SHARED_LIBRARY}"
+        "$<TARGET_FILE_DIR:LOOT>/${LIBLOOT_SHARED_LIBRARY}")
 add_custom_command(TARGET loot_gui_tests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${LOOT_API_EXTRACTED_PATH}/${LOOT_API_SHARED_LIBRARY}"
-        "$<TARGET_FILE_DIR:loot_gui_tests>/${LOOT_API_SHARED_LIBRARY}")
+        "${LIBLOOT_EXTRACTED_PATH}/${LIBLOOT_SHARED_LIBRARY}"
+        "$<TARGET_FILE_DIR:loot_gui_tests>/${LIBLOOT_SHARED_LIBRARY}")
 
 # Build the UI HTML.
 add_custom_command(TARGET LOOT POST_BUILD

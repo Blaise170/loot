@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -26,14 +26,16 @@ along with LOOT.  If not, see
 #define LOOT_GUI_QUERY_CLEAR_PLUGIN_METADATA_QUERY
 
 #include "gui/cef/query/types/metadata_query.h"
-#include "gui/state/game.h"
+#include "gui/state/game/game.h"
 
 namespace loot {
-class ClearPluginMetadataQuery : public MetadataQuery {
+template<typename G = gui::Game>
+class ClearPluginMetadataQuery : public MetadataQuery<G> {
 public:
-  ClearPluginMetadataQuery(LootState& state, const std::string& pluginName) :
-      MetadataQuery(state),
-      game_(state.getCurrentGame()),
+  ClearPluginMetadataQuery(G& game,
+                           std::string language,
+                           std::string pluginName) :
+      MetadataQuery<G>(game, language),
       pluginName_(pluginName) {}
 
   std::string executeLogic() {
@@ -42,14 +44,13 @@ public:
       logger->debug("Clearing user metadata for plugin {}", pluginName_);
     }
 
-    game_.ClearUserMetadata(pluginName_);
-    game_.SaveUserMetadata();
+    this->getGame().ClearUserMetadata(pluginName_);
+    this->getGame().SaveUserMetadata();
 
-    return generateJsonResponse(pluginName_);
+    return this->generateJsonResponse(pluginName_);
   }
 
 private:
-  gui::Game& game_;
   const std::string pluginName_;
 };
 }

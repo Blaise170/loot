@@ -1,26 +1,24 @@
-/*
-<link rel="import" href="../../../../bower_components/polymer/polymer-element.html">
-<link rel="import" href="../../../../bower_components/shadycss/apply-shim.html">
+import { PolymerElement, html } from '@polymer/polymer';
+import * as Gestures from '@polymer/polymer/lib/utils/gestures.js';
 
-<link rel="import" href="../../../../bower_components/app-layout/app-toolbar/app-toolbar.html">
+import '@polymer/app-layout/app-toolbar/app-toolbar.js';
 
-<link rel="import" href="../../../../bower_components/iron-flex-layout/iron-flex-layout.html">
-<link rel="import" href="../../../../bower_components/iron-icon/iron-icon.html">
-<link rel="import" href="../../../../bower_components/iron-icons/iron-icons.html">
-<link rel="import" href="../../../../bower_components/iron-pages/iron-pages.html">
+import '@polymer/iron-flex-layout/iron-flex-layout.js';
+import '@polymer/iron-icon/iron-icon.js';
+import '@polymer/iron-icons/iron-icons.js';
+import '@polymer/iron-pages/iron-pages.js';
 
-<link rel="import" href="../../../../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../../../../bower_components/paper-input/paper-input.html">
-<link rel="import" href="../../../../bower_components/paper-tabs/paper-tabs.html">
-<link rel="import" href="../../../../bower_components/paper-toggle-button/paper-toggle-button.html">
-<link rel="import" href="../../../../bower_components/paper-tooltip/paper-tooltip.html">
+import '@polymer/paper-icon-button/paper-icon-button.js';
+import '@polymer/paper-input/paper-input.js';
+import '@polymer/paper-tabs/paper-tabs.js';
+import '@polymer/paper-toggle-button/paper-toggle-button.js';
+import '@polymer/paper-tooltip/paper-tooltip.js';
 
-<link rel="import" href="editable-table.html">
-<link rel="import" href="loot-custom-icons.html">
-*/
-import Plugin from '../js/plugin.js';
+import './editable-table.js';
+import './loot-custom-icons.js';
+import { crcToString, Plugin } from '../js/plugin.js';
 
-export default class LootPluginEditor extends Polymer.Element {
+export default class LootPluginEditor extends PolymerElement {
   static get is() {
     return 'loot-plugin-editor';
   }
@@ -35,7 +33,7 @@ export default class LootPluginEditor extends Polymer.Element {
   }
 
   static get template() {
-    return Polymer.html`
+    return html`
       <style>
         :host {
           position: relative;
@@ -43,7 +41,8 @@ export default class LootPluginEditor extends Polymer.Element {
           height: 264px;
           min-height: 56px;
           max-height: calc(100% - 56px);
-          transition: height var(--state-transition-time), min-height var(--state-transition-time);
+          transition: height var(--state-transition-time),
+            min-height var(--state-transition-time);
           background-color: var(--primary-background-color);
         }
         :host(.hidden) {
@@ -93,13 +92,16 @@ export default class LootPluginEditor extends Polymer.Element {
           height: calc(100% - 103px);
           overflow: auto;
         }
-        iron-pages > *:not(.iron-selected) {
+        iron-pages > slot > div:not(.iron-selected) {
           display: none;
         }
 
         /* Misc Styling. */
         app-toolbar {
-          background: var(--loot-plugin-editor-toolbar-background, var(--light-primary-color));
+          background: var(
+            --loot-plugin-editor-toolbar-background,
+            var(--light-primary-color)
+          );
           color: var(--primary-text-color);
           height: 104px;
         }
@@ -131,27 +133,31 @@ export default class LootPluginEditor extends Polymer.Element {
           color: var(--secondary-text-color);
         }
         editable-table paper-icon-button[disabled] {
-            color: var(--disabled-text-color);
+          color: var(--disabled-text-color);
         }
-        editable-table paper-icon-button[icon=delete]:hover {
-            color: red;
+        editable-table paper-icon-button[icon='delete']:hover {
+          color: red;
         }
-        editable-table paper-icon-button[icon=add]:hover {
-            color: green;
+        editable-table paper-icon-button[icon='add']:hover {
+          color: green;
         }
       </style>
       <div id="splitter"></div>
       <app-toolbar>
         <header top-item>
-          <div id="title">
-            <slot name="title"></slot>
-          </div>
+          <div id="title"><slot name="title"></slot></div>
           <paper-icon-button id="accept" icon="save"></paper-icon-button>
           <paper-tooltip for="accept">Save Metadata</paper-tooltip>
           <paper-icon-button id="cancel" icon="close"></paper-icon-button>
           <paper-tooltip for="cancel">Cancel</paper-tooltip>
         </header>
-        <paper-tabs id="tableTabs" selected="{{selected}}" attr-for-selected="data-for" scrollable bottom-item>
+        <paper-tabs
+          id="tableTabs"
+          selected="{{selected}}"
+          attr-for-selected="data-for"
+          scrollable
+          bottom-item
+        >
           <paper-tab data-for="main">Main</paper-tab>
           <paper-tab data-for="after">Load After</paper-tab>
           <paper-tab data-for="req">Requirements</paper-tab>
@@ -163,116 +169,33 @@ export default class LootPluginEditor extends Polymer.Element {
           <paper-tab data-for="url">Locations</paper-tab>
         </paper-tabs>
       </app-toolbar>
-      <iron-pages id="tablePages" selected="{{selected}}" attr-for-selected="id">
-        <div id="main">
+      <iron-pages
+        id="tablePages"
+        selected="{{selected}}"
+        attr-for-selected="data-page"
+      >
+        <div id="main" data-page="main">
           <div>
             <div>Enable Edits</div>
             <paper-toggle-button id="enableEdits"></paper-toggle-button>
           </div>
           <div>
             <div>Group</div>
-            <loot-dropdown-menu id="group" no-label-float>
+            <loot-dropdown-menu
+              id="group"
+              no-label-float
+              vertical-align="bottom"
+            >
               <!-- Group <paper-item> elements go here. -->
             </loot-dropdown-menu>
           </div>
         </div>
-        <div id="after">
-          <editable-table data-template="fileRow">
-            <table>
-              <thead>
-                <tr><th>Filename</th><th>Display Name</th><th>Condition</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- File rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-        <div id="req">
-          <editable-table data-template="fileRow">
-            <table>
-              <thead>
-                <tr><th>Filename</th><th>Display Name</th><th>Condition</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- File rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-        <div id="inc">
-          <editable-table data-template="fileRow">
-            <table>
-              <thead>
-                <tr><th>Filename</th><th>Display Name</th><th>Condition</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- File rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-        <div id="message">
-          <editable-table data-template="messageRow">
-            <table>
-              <thead>
-                <tr><th>Type</th><th>Content</th><th>Condition</th><th>Language</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- Message rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-        <div id="tags">
-          <editable-table data-template="tagRow">
-            <table>
-              <thead>
-                <tr><th>Add/Remove</th><th>Bash Tag</th><th>Condition</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- Bash Tag rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-        <div id="dirty">
-          <editable-table data-template="dirtyInfoRow">
-            <table>
-              <thead>
-                <tr><th>CRC</th><th>ITM Count</th><th>Deleted References</th><th>Deleted Navmeshes</th><th>Cleaning Utility</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- Dirty info rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-        <div id="clean">
-          <editable-table data-template="cleanInfoRow">
-            <table>
-              <thead>
-                <tr><th>CRC</th><th>Cleaning Utility</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- Clean info rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-        <div id="url">
-          <editable-table data-template="locationRow">
-            <table>
-              <thead>
-                <tr><th>URL</th><th>Name</th><th></th></tr>
-              </thead>
-              <tbody>
-                <!-- Location rows go here. -->
-              </tbody>
-            </table>
-          </editable-table>
-        </div>
-      </iron-pages>`;
+        <slot name="after"></slot> <slot name="req"></slot>
+        <slot name="inc"></slot> <slot name="message"></slot>
+        <slot name="tags"></slot> <slot name="dirty"></slot>
+        <slot name="clean"></slot> <slot name="url"></slot>
+      </iron-pages>
+    `;
   }
 
   connectedCallback() {
@@ -283,11 +206,7 @@ export default class LootPluginEditor extends Polymer.Element {
       'mousedown',
       LootPluginEditor._stopPropagation
     );
-    Polymer.Gestures.addListener(
-      this.$.splitter,
-      'track',
-      this._onSplitterDrag
-    );
+    Gestures.addListener(this.$.splitter, 'track', this._onSplitterDrag);
   }
 
   disconnectedCallback() {
@@ -298,11 +217,7 @@ export default class LootPluginEditor extends Polymer.Element {
       'mousedown',
       LootPluginEditor._stopPropagation
     );
-    Polymer.Gestures.removeListener(
-      this.$.splitter,
-      'track',
-      this._onSplitterDrag
-    );
+    Gestures.removeListener(this.$.splitter, 'track', this._onSplitterDrag);
   }
 
   static _stopPropagation(evt) {
@@ -332,9 +247,9 @@ export default class LootPluginEditor extends Polymer.Element {
   static _rowDataToCrc(rowData) {
     return {
       crc: parseInt(rowData.crc, 16),
-      itm: parseInt(rowData.itm, 10),
-      udr: parseInt(rowData.udr, 10),
-      nav: parseInt(rowData.nav, 10),
+      itm: parseInt(rowData.itm, 10) || undefined,
+      udr: parseInt(rowData.udr, 10) || undefined,
+      nav: parseInt(rowData.nav, 10) || undefined,
       util: rowData.utility
     };
   }
@@ -351,25 +266,26 @@ export default class LootPluginEditor extends Polymer.Element {
       group: this.$.group.value
     };
 
-    const tables = this.shadowRoot.querySelectorAll('editable-table');
+    const tables = this.querySelectorAll('editable-table');
     for (let j = 0; j < tables.length; j += 1) {
       const rowsData = tables[j].getRowsData(true);
+      const tableType = tables[j].parentElement.getAttribute('data-page');
       if (rowsData.length > 0) {
-        if (tables[j].parentElement.id === 'after') {
+        if (tableType === 'after') {
           metadata.after = rowsData;
-        } else if (tables[j].parentElement.id === 'req') {
+        } else if (tableType === 'req') {
           metadata.req = rowsData;
-        } else if (tables[j].parentElement.id === 'inc') {
+        } else if (tableType === 'inc') {
           metadata.inc = rowsData;
-        } else if (tables[j].parentElement.id === 'message') {
+        } else if (tableType === 'message') {
           metadata.msg = rowsData;
-        } else if (tables[j].parentElement.id === 'tags') {
+        } else if (tableType === 'tags') {
           metadata.tag = rowsData.map(Plugin.tagFromRowData);
-        } else if (tables[j].parentElement.id === 'dirty') {
+        } else if (tableType === 'dirty') {
           metadata.dirty = rowsData.map(LootPluginEditor._rowDataToCrc);
-        } else if (tables[j].parentElement.id === 'clean') {
+        } else if (tableType === 'clean') {
           metadata.clean = rowsData.map(LootPluginEditor._rowDataToCrc);
-        } else if (tables[j].parentElement.id === 'url') {
+        } else if (tableType === 'url') {
           metadata.url = rowsData;
         }
       }
@@ -381,8 +297,8 @@ export default class LootPluginEditor extends Polymer.Element {
   static _onHideEditor(evt) {
     /* First validate table inputs. */
     let isValid = true;
-    const inputs = evt.target.parentElement.parentNode.querySelectorAll(
-      'paper-input'
+    const inputs = evt.target.parentElement.parentElement.parentNode.host.querySelectorAll(
+      'editable-table'
     );
     for (let i = 0; i < inputs.length; i += 1) {
       if (!inputs[i].validate()) {
@@ -392,11 +308,9 @@ export default class LootPluginEditor extends Polymer.Element {
 
     if (isValid || evt.target.id !== 'accept') {
       /* Now hide editor. */
-      evt.target.parentElement.parentElement.parentNode.host.style.height = '';
-      evt.target.parentElement.parentElement.parentNode.host.classList.toggle(
-        'hidden',
-        true
-      );
+      const editor = evt.target.parentElement.parentElement.parentNode.host;
+      editor.style.height = '';
+      editor.classList.toggle('hidden', true);
 
       /* Fire the close event, saying whether or not to save data. */
       evt.target.dispatchEvent(
@@ -411,12 +325,35 @@ export default class LootPluginEditor extends Polymer.Element {
 
   static _dirtyInfoToRowData(dirtyInfo) {
     return {
-      crc: dirtyInfo.crc.toString(16).toUpperCase(),
+      crc: crcToString(dirtyInfo.crc),
       itm: dirtyInfo.itm,
       udr: dirtyInfo.udr,
       nav: dirtyInfo.nav,
       utility: dirtyInfo.util
     };
+  }
+
+  static _highlightNonUserGroup(groupElements, pluginData) {
+    let nonUserGroup;
+    if (pluginData.masterlist && pluginData.masterlist.group) {
+      nonUserGroup = pluginData.masterlist.group;
+    } else {
+      nonUserGroup = 'default';
+    }
+
+    for (let i = 0; i < groupElements.length; i += 1) {
+      if (
+        groupElements[i].getAttribute('value') === nonUserGroup &&
+        nonUserGroup !== pluginData.group
+      ) {
+        if (nonUserGroup !== pluginData.group) {
+          groupElements[i].style.fontWeight = 'bold';
+          groupElements[i].style.color = 'var(--primary-color)';
+        }
+      } else {
+        groupElements[i].style = undefined;
+      }
+    }
   }
 
   setEditorData(newData) {
@@ -431,19 +368,22 @@ export default class LootPluginEditor extends Polymer.Element {
     }
     this.$.group.value = newData.group;
 
+    LootPluginEditor._highlightNonUserGroup(this.$.group.children, newData);
+
     /* Clear then fill in editor table data. Masterlist-originated
         rows should have their contents made read-only. */
-    const tables = this.shadowRoot.querySelectorAll('editable-table');
+    const tables = this.querySelectorAll('editable-table');
     for (let j = 0; j < tables.length; j += 1) {
       tables[j].clear();
-      if (tables[j].parentElement.id === 'message') {
+      const tableType = tables[j].parentElement.getAttribute('data-page');
+      if (tableType === 'message') {
         if (newData.masterlist && newData.masterlist.msg) {
           newData.masterlist.msg.forEach(tables[j].addReadOnlyRow, tables[j]);
         }
         if (newData.userlist && newData.userlist.msg) {
           newData.userlist.msg.forEach(tables[j].addRow, tables[j]);
         }
-      } else if (tables[j].parentElement.id === 'tags') {
+      } else if (tableType === 'tags') {
         if (newData.masterlist && newData.masterlist.tag) {
           newData.masterlist.tag
             .map(Plugin.tagToRowData)
@@ -454,7 +394,7 @@ export default class LootPluginEditor extends Polymer.Element {
             .map(Plugin.tagToRowData)
             .forEach(tables[j].addRow, tables[j]);
         }
-      } else if (tables[j].parentElement.id === 'dirty') {
+      } else if (tableType === 'dirty') {
         if (newData.masterlist && newData.masterlist.dirty) {
           newData.masterlist.dirty
             .map(LootPluginEditor._dirtyInfoToRowData)
@@ -465,7 +405,7 @@ export default class LootPluginEditor extends Polymer.Element {
             .map(LootPluginEditor._dirtyInfoToRowData)
             .forEach(tables[j].addRow, tables[j]);
         }
-      } else if (tables[j].parentElement.id === 'clean') {
+      } else if (tableType === 'clean') {
         if (newData.masterlist && newData.masterlist.clean) {
           newData.masterlist.clean
             .map(LootPluginEditor._dirtyInfoToRowData)
@@ -477,20 +417,14 @@ export default class LootPluginEditor extends Polymer.Element {
             .forEach(tables[j].addRow, tables[j]);
         }
       } else {
-        if (
-          newData.masterlist &&
-          newData.masterlist[tables[j].parentElement.id]
-        ) {
-          newData.masterlist[tables[j].parentElement.id].forEach(
+        if (newData.masterlist && newData.masterlist[tableType]) {
+          newData.masterlist[tableType].forEach(
             tables[j].addReadOnlyRow,
             tables[j]
           );
         }
-        if (newData.userlist && newData.userlist[tables[j].parentElement.id]) {
-          newData.userlist[tables[j].parentElement.id].forEach(
-            tables[j].addRow,
-            tables[j]
-          );
+        if (newData.userlist && newData.userlist[tableType]) {
+          newData.userlist[tableType].forEach(tables[j].addRow, tables[j]);
         }
       }
     }

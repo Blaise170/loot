@@ -1,3 +1,5 @@
+import marked from 'marked/marked.min';
+
 import {
   askQuestion,
   closeProgress,
@@ -18,7 +20,7 @@ import {
 import Filters from './filters.js';
 import Game from './game.js';
 import handlePromiseError from './handlePromiseError.js';
-import Plugin from './plugin.js';
+import { Plugin } from './plugin.js';
 import query from './query.js';
 
 // Depends on the following globals:
@@ -52,20 +54,18 @@ export function onConflictsFilter(evt) {
     loot.filters
       .activateConflictsFilter(evt.currentTarget.value)
       .then(response => {
-        const newGamePlugins = [];
-        loot.game.plugins.forEach(plugin => {
+        loot.game.generalMessages = response.generalMessages;
+        loot.game.plugins = loot.game.plugins.reduce((plugins, plugin) => {
           const responsePlugin = response.plugins.find(
             item => item.name === plugin.name
           );
           if (responsePlugin) {
             plugin.update(responsePlugin);
-            newGamePlugins.push(plugin);
+            plugins.push(plugin);
           }
-        });
+          return plugins;
+        }, []);
 
-        loot.game.generalMessages = response.generalMessages;
-
-        loot.game.plugins = newGamePlugins;
         loot.filters.apply(loot.game.plugins);
 
         /* Scroll to the target plugin */
@@ -182,7 +182,7 @@ export function onSortPlugins() {
   if (loot.settings.updateMasterlist) {
     promise = promise.then(updateMasterlist);
   }
-  promise
+  return promise
     .then(() => query('sortPlugins'))
     .then(JSON.parse)
     .then(result => {
@@ -194,10 +194,12 @@ export function onSortPlugins() {
 
       if (!result.plugins || result.plugins.length === 0) {
         const message = result.generalMessages.find(item =>
-          item.text.startsWith('Cyclic interaction detected')
+          item.text.startsWith(
+            loot.l10n.translate('Cyclic interaction detected')
+          )
         );
         const text = message
-          ? message.text
+          ? marked(message.text)
           : 'see general messages for details.';
         throw new Error(
           loot.l10n.translateFormatted(
@@ -543,10 +545,6 @@ export function onEditorClose(evt) {
     .then(result => {
       plugin.update(result);
 
-      /* Explicitly set userlist to detect when user edits have been removed
-       (so result.userlist is not present). */
-      plugin.userlist = result.userlist;
-
       /* Now perform search again. If there is no current search, this won't
        do anything. */
       document.getElementById('searchBar').search();
@@ -603,8 +601,6 @@ export function onClearMetadata(evt) {
             item => item.id === evt.target.id
           );
           if (existingPlugin) {
-            existingPlugin.userlist = undefined;
-
             existingPlugin.update(plugin);
           }
           showNotification(
@@ -631,18 +627,13 @@ export function onSearchBegin(evt) {
     return;
   }
 
-  // Don't push to the target's results property directly, as the
-  // change observer doesn't work correctly unless special Polymer APIs
-  // are used, which I don't want to get into.
-  const results = [];
-  loot.game.plugins.forEach((plugin, index) => {
+  evt.target.results = loot.game.plugins.reduce((indices, plugin, index) => {
     if (plugin.getCardContent(loot.filters).containsText(evt.detail.needle)) {
-      results.push(index);
+      indices.push(index);
       plugin.isSearchResult = true;
     }
-  });
-
-  evt.target.results = results;
+    return indices;
+  }, []);
 }
 export function onSearchEnd(/* evt */) {
   loot.game.plugins.forEach(plugin => {

@@ -1,8 +1,8 @@
-// import {PolymerElement} from '@polymer/polymer/polymer-element.js';
-// import {PaperDropdownMenu} from 'paper-dropdown-menu/paper-dropdown-menu.js">
-// import {PaperListbox} from 'paper-listbox/paper-listbox.js">
+import { PolymerElement, html } from '@polymer/polymer';
+import '@polymer/paper-dropdown-menu/paper-dropdown-menu.js';
+import '@polymer/paper-listbox/paper-listbox.js';
 
-export default class LootDropdownMenu extends Polymer.Element {
+export default class LootDropdownMenu extends PolymerElement {
   static get is() {
     return 'loot-dropdown-menu';
   }
@@ -33,32 +33,32 @@ export default class LootDropdownMenu extends Polymer.Element {
   }
 
   static get template() {
-    return Polymer.html`
+    return html`
       <style>
         paper-dropdown-menu {
           width: 100%;
 
           --paper-input-container: {
             transition: opacity var(--state-transition-time);
-          };
+          }
           --paper-dropdown-menu-icon: {
             color: var(--secondary-text-color);
-          };
+          }
         }
         :host(.dark) paper-dropdown-menu {
           --paper-input-container-underline: {
             border-color: var(--dark-theme-divider-color);
-          };
+          }
           --paper-input-container-underline-disabled: {
             border-color: var(--dark-theme-divider-color);
-          };
+          }
           --paper-input-container-input-color: white;
           --paper-dropdown-menu-input: {
             color: var(--dark-theme-text-color);
-          };
+          }
           --paper-dropdown-menu-icon: {
             color: var(--dark-theme-secondary-color);
-          };
+          }
         }
 
         ::slotted(paper-item) {
@@ -68,8 +68,17 @@ export default class LootDropdownMenu extends Polymer.Element {
           cursor: pointer;
         }
       </style>
-      <paper-dropdown-menu disabled$="[[disabled]]" no-label-float="[[noLabelFloat]]" label="[[label]]" vertical-align="[[verticalAlign]]">
-        <paper-listbox slot="dropdown-content" attr-for-selected="value" selected="{{value}}">
+      <paper-dropdown-menu
+        disabled$="[[disabled]]"
+        no-label-float="[[noLabelFloat]]"
+        label="[[label]]"
+        vertical-align="[[verticalAlign]]"
+      >
+        <paper-listbox
+          slot="dropdown-content"
+          attr-for-selected="value"
+          selected="{{value}}"
+        >
           <slot></slot>
         </paper-listbox>
       </paper-dropdown-menu>

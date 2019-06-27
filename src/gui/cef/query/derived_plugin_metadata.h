@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -25,56 +25,58 @@ along with LOOT.  If not, see
 #ifndef LOOT_GUI_QUERY_DERIVED_PLUGIN_METADATA
 #define LOOT_GUI_QUERY_DERIVED_PLUGIN_METADATA
 
-#include <json.hpp>
-#include <loot/api.h>
+#include <optional>
 
-#include "gui/state/loot_state.h"
+#include <loot/api.h>
+#include <json.hpp>
+
+#include "gui/state/game/game.h"
 
 namespace loot {
+template<typename G>
 class DerivedPluginMetadata {
 public:
-  DerivedPluginMetadata(LootState& state,
-                        const std::shared_ptr<const PluginInterface>& file,
-                        const PluginMetadata& evaluatedMetadata) {
-    name = file->GetName();
-    version = file->GetVersion();
-    isActive = state.getCurrentGame().IsPluginActive(name);
-    isDirty = !evaluatedMetadata.GetDirtyInfo().empty();
-    isEmpty = file->IsEmpty();
-    isMaster = file->IsMaster();
-    isLightMaster = file->IsLightMaster();
-    loadsArchive = file->LoadsArchive();
+  DerivedPluginMetadata(const std::shared_ptr<const PluginInterface>& file,
+                        const G& game,
+                        std::string language) :
+      name(file->GetName()),
+      version(file->GetVersion()),
+      isActive(game.IsPluginActive(file->GetName())),
+      isDirty(false),
+      isEmpty(file->IsEmpty()),
+      isMaster(file->IsMaster()),
+      isLightMaster(file->IsLightMaster()),
+      loadsArchive(file->LoadsArchive()),
+      crc(file->GetCRC()),
+      loadOrderIndex(game.GetActiveLoadOrderIndex(file, game.GetLoadOrder())),
+      currentTags(file->GetBashTags()),
+      language(language) {}
 
-    crc = file->GetCRC();
-    loadOrderIndex = state.getCurrentGame().GetActiveLoadOrderIndex(file,
-      state.getCurrentGame().GetLoadOrder());
-
-    group = evaluatedMetadata.GetGroup();
-    if (!evaluatedMetadata.GetCleanInfo().empty()) {
-      cleanedWith = evaluatedMetadata.GetCleanInfo().begin()->GetCleaningUtility();
+  void setEvaluatedMetadata(PluginMetadata metadata) {
+    isDirty = !metadata.GetDirtyInfo().empty();
+    group = metadata.GetGroup();
+    if (!metadata.GetCleanInfo().empty()) {
+      cleanedWith = metadata.GetCleanInfo().begin()->GetCleaningUtility();
     }
-    messages = evaluatedMetadata.GetSimpleMessages(state.getLanguage());
-    suggestedTags = evaluatedMetadata.GetTags();
-    currentTags = file->GetBashTags();
-
-    language = state.getLanguage();
+    messages = metadata.GetSimpleMessages(language);
+    suggestedTags = metadata.GetTags();
   }
 
-  void storeUnevaluatedMetadata(PluginMetadata masterlistEntry, PluginMetadata userlistEntry) {
-    masterlistMetadata = masterlistEntry;
-    userMetadata = userlistEntry;
+  void setMasterlistMetadata(PluginMetadata masterlistEntry) {
+    this->masterlistMetadata = masterlistEntry;
+  }
+
+  void setUserMetadata(PluginMetadata userlistEntry) {
+    this->userMetadata = userlistEntry;
   }
 
   void setLoadOrderIndex(short loadOrderIndex) {
     this->loadOrderIndex = loadOrderIndex;
   }
 
-  static DerivedPluginMetadata none() {
-    return DerivedPluginMetadata();
-  }
 private:
   std::string name;
-  std::string version;
+  std::optional<std::string> version;
   bool isActive;
   bool isDirty;
   bool isEmpty;
@@ -82,23 +84,23 @@ private:
   bool isLightMaster;
   bool loadsArchive;
 
-  uint32_t crc;
-  short loadOrderIndex;
+  std::optional<uint32_t> crc;
+  std::optional<short> loadOrderIndex;
 
-  std::string group;
+  std::optional<std::string> group;
   std::string cleanedWith;
   std::vector<SimpleMessage> messages;
   std::set<Tag> currentTags;
   std::set<Tag> suggestedTags;
 
-  PluginMetadata masterlistMetadata;
-  PluginMetadata userMetadata;
+  std::optional<PluginMetadata> masterlistMetadata;
+  std::optional<PluginMetadata> userMetadata;
 
   std::string language;
 
-  DerivedPluginMetadata() {}
-
-  friend void to_json(nlohmann::json& json, const DerivedPluginMetadata& plugin);
+  template<typename T>
+  friend void to_json(nlohmann::json& json,
+                      const DerivedPluginMetadata<T>& plugin);
 };
 }
 

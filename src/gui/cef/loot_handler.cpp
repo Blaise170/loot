@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -24,6 +24,7 @@
 
 #include "gui/cef/loot_handler.h"
 
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -32,7 +33,6 @@
 #include <include/views/cef_browser_view.h>
 #include <include/views/cef_window.h>
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 
 #include "gui/cef/loot_scheme_handler_factory.h"
 #include "gui/cef/query/query_handler.h"
@@ -40,6 +40,38 @@
 #include "gui/state/loot_paths.h"
 
 namespace loot {
+LootSettings::WindowPosition getWindowPosition(CefRefPtr<CefBrowser> browser) {
+  auto browserView = CefBrowserView::GetForBrowser(browser);
+  if (browserView == nullptr) {
+    throw std::runtime_error("browser view is null");
+  }
+
+  auto window = browserView->GetWindow();
+  if (window == nullptr) {
+    throw std::runtime_error("window is null");
+  }
+
+  LootSettings::WindowPosition position;
+  position.maximised = window->IsMaximized();
+
+  // Un-maximise the window so that the non-maximised size and position are
+  // recorded.
+  window->Restore();
+
+  CefRect windowBounds = window->GetBoundsInScreen();
+  position.top = windowBounds.y;
+  position.bottom = windowBounds.y + windowBounds.height;
+  position.left = windowBounds.x;
+  position.right = windowBounds.x + windowBounds.width;
+
+  if (position.maximised) {
+    // Maximise the window again in case it's not about to close.
+    window->Maximize();
+  }
+
+  return position;
+}
+
 LootHandler::LootHandler(LootState& lootState) : lootState_(lootState) {}
 
 // CefClient methods
@@ -62,35 +94,38 @@ bool LootHandler::OnProcessMessageReceived(
 // CefDisplayHandler methods
 //--------------------------
 
-bool LootHandler::OnConsoleMessage(CefRefPtr< CefBrowser > browser,
-  cef_log_severity_t level,
-  const CefString& message,
-  const CefString& source,
-  int line) {
-  auto logger = lootState_.getLogger();
+bool LootHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+                                   cef_log_severity_t level,
+                                   const CefString& message,
+                                   const CefString& source,
+                                   int line) {
+  auto logger = getLogger();
   if (logger) {
     std::string logMessage;
     if (source.empty()) {
-      logMessage = fmt::format("Chromium console message: {}", message.ToString());
-    }
-    else {
-      logMessage = fmt::format("Chromium console message from {} at line {}: {}",
-        source.ToString(), line, message.ToString());
+      logMessage =
+          fmt::format("Chromium console message: {}", message.ToString());
+    } else {
+      logMessage =
+          fmt::format("Chromium console message from {} at line {}: {}",
+                      source.ToString(),
+                      line,
+                      message.ToString());
     }
 
     switch (level) {
-    case LOGSEVERITY_INFO:
-      logger->info(logMessage);
-      break;
-    case LOGSEVERITY_WARNING:
-      logger->warn(logMessage);
-      break;
-    case LOGSEVERITY_ERROR:
-      logger->error(logMessage);
-      break;
-    default:
-      logger->trace(logMessage);
-      break;
+      case LOGSEVERITY_INFO:
+        logger->info(logMessage);
+        break;
+      case LOGSEVERITY_WARNING:
+        logger->warn(logMessage);
+        break;
+      case LOGSEVERITY_ERROR:
+        logger->error(logMessage);
+        break;
+      default:
+        logger->trace(logMessage);
+        break;
     }
   }
 
@@ -117,47 +152,26 @@ bool LootHandler::DoClose(CefRefPtr<CefBrowser> browser) {
   assert(CefCurrentlyOn(TID_UI));
 
   // Check if unapplied changes exist.
-  if (lootState_.hasUnappliedChanges()) {
+  if (lootState_.HasUnappliedChanges()) {
     browser->GetMainFrame()->ExecuteJavaScript(
         "loot.onQuit();", browser->GetMainFrame()->GetURL(), 0);
     return true;
   }
 
-  auto logger = lootState_.getLogger();
-
-  auto browserView = CefBrowserView::GetForBrowser(browser);
-  if (browserView == nullptr) {
+  try {
+    auto position = getWindowPosition(browser);
+    lootState_.storeWindowPosition(position);
+  } catch (std::exception& e) {
+    auto logger = getLogger();
     if (logger) {
-      logger->error("Failed to save LOOT's settings, browser view is null");
+      logger->error("Failed to record window position: {}", e.what());
     }
-    return false;
   }
-
-  auto window = browserView->GetWindow();
-  if (window == nullptr) {
-    if (logger) {
-      logger->error("Failed to save LOOT's settings, window is null");
-    }
-    return false;
-  }
-
-  LootSettings::WindowPosition position;
-  position.maximised = window->IsMaximized();
-
-  // Un-maximise the window so that the non-maximised size and position are
-  // recorded.
-  window->Restore();
-
-  CefRect windowBounds = window->GetBoundsInScreen();
-  position.top = windowBounds.y;
-  position.bottom = windowBounds.y + windowBounds.height;
-  position.left = windowBounds.x;
-  position.right = windowBounds.x + windowBounds.width;
-  lootState_.storeWindowPosition(position);
 
   try {
-    lootState_.save(LootPaths::getSettingsPath());
+    lootState_.save(lootState_.getSettingsPath());
   } catch (std::exception& e) {
+    auto logger = getLogger();
     if (logger) {
       logger->error("Failed to save LOOT's settings. Error: {}", e.what());
     }
@@ -223,7 +237,7 @@ bool LootHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                  CefRefPtr<CefRequest> request,
                                  bool user_gesture,
                                  bool is_redirect) {
-  auto logger = lootState_.getLogger();
+  auto logger = getLogger();
   if (logger) {
     logger->info("Attempting to open link: {}", request->GetURL().ToString());
   }
@@ -236,8 +250,9 @@ bool LootHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     return false;
   } else if (boost::starts_with(url, "http://localhost:")) {
     if (logger) {
-      logger->warn("Link is to a page on localhost, if this isn't happening "
-                   "while running tests, something has gone wrong");
+      logger->warn(
+          "Link is to a page on localhost, if this isn't happening "
+          "while running tests, something has gone wrong");
     }
     return false;
   }
@@ -246,7 +261,7 @@ bool LootHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
     logger->info("Opening link in Windows' default handler.");
   }
   OpenInDefaultApplication(
-      boost::filesystem::path(request->GetURL().ToString()));
+      std::filesystem::u8path(request->GetURL().ToString()));
 
   return true;
 }
@@ -258,10 +273,10 @@ CefRequestHandler::ReturnValue LootHandler::OnBeforeResourceLoad(
     CefRefPtr<CefRequestCallback> callback) {
   if (boost::starts_with(request->GetURL().ToString(),
                          "https://fonts.googleapis.com")) {
-    auto logger = lootState_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->warn("Blocking load of resource at {}",
-        request->GetURL().ToString());
+                   request->GetURL().ToString());
     }
     return RV_CANCEL;
   }

@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -27,19 +27,24 @@ along with LOOT.  If not, see
 
 #include "gui/cef/query/json.h"
 #include "gui/cef/query/types/metadata_query.h"
-#include "gui/state/loot_state.h"
+#include "gui/state/game/game.h"
+#include "gui/state/unapplied_change_counter.h"
 
 namespace loot {
-class EditorClosedQuery : public MetadataQuery {
+template<typename G = gui::Game>
+class EditorClosedQuery : public MetadataQuery<G> {
 public:
-  EditorClosedQuery(LootState& state, nlohmann::json editorState) :
-      MetadataQuery(state),
-      state_(state),
+  EditorClosedQuery(G& game,
+                    UnappliedChangeCounter& counter,
+                    std::string language,
+                    nlohmann::json editorState) :
+      MetadataQuery<G>(game, language),
+      counter_(counter),
       applyEdits_(editorState.at("applyEdits")) {
     try {
       metadata_ = editorState.at("metadata");
     } catch (...) {
-      state_.decrementUnappliedChangeCounter();
+      counter_.DecrementUnappliedChangeCounter();
       throw;
     }
   }
@@ -48,41 +53,51 @@ public:
     if (applyEdits_) {
       applyUserEdits();
     }
-    state_.decrementUnappliedChangeCounter();
+    counter_.DecrementUnappliedChangeCounter();
 
-    return generateJsonResponse(metadata_.GetName());
+    return this->generateJsonResponse(metadata_.GetName());
   }
 
 private:
-  PluginMetadata getNonUserMetadata() {
-    auto logger = state_.getLogger();
+  std::optional<PluginMetadata> getNonUserMetadata() {
+    auto logger = getLogger();
     if (logger) {
       logger->trace("Getting non-user metadata for: {}", metadata_.GetName());
     }
-    auto masterlistMetadata =
-        state_.getCurrentGame().GetMasterlistMetadata(metadata_.GetName());
 
-    auto plugin = state_.getCurrentGame().GetPlugin(metadata_.GetName());
+    auto plugin = this->getGame().GetPlugin(metadata_.GetName());
     if (plugin) {
-      return MetadataQuery::getNonUserMetadata(plugin, masterlistMetadata);
+      return MetadataQuery<G>::getNonUserMetadata(plugin);
     }
 
-    return masterlistMetadata;
+    return this->getGame().GetMasterlistMetadata(metadata_.GetName());
   }
 
   PluginMetadata getUserMetadata() {
+    // metadata_ may have no group or may have a group of "default" or another
+    // value. "default" should become no group if there is no non-user metadata,
+    // or if the non-user metadata also has no group or the "default" group.
     auto nonUserMetadata = getNonUserMetadata();
-    auto userMetadata = metadata_.NewMetadata(nonUserMetadata);
+    if (nonUserMetadata.has_value()) {
+      auto userMetadata = metadata_.NewMetadata(nonUserMetadata.value());
+      if (userMetadata.GetGroup() == std::optional(Group().GetName()) &&
+          nonUserMetadata.value().GetGroup().value_or(Group().GetName()) ==
+              Group().GetName()) {
+        userMetadata.UnsetGroup();
+      }
+      return userMetadata;
+    }
 
-    if (metadata_.GetGroup() != nonUserMetadata.GetGroup()) {
-      userMetadata.SetGroup(metadata_.GetGroup());
+    auto userMetadata = metadata_;
+    if (userMetadata.GetGroup() == std::optional(Group().GetName())) {
+      userMetadata.UnsetGroup();
     }
 
     return userMetadata;
   }
 
   void applyUserEdits() {
-    auto logger = state_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->trace("Applying user edits for: {}", metadata_.GetName());
     }
@@ -94,21 +109,21 @@ private:
     if (logger) {
       logger->trace("Erasing the existing userlist entry.");
     }
-    state_.getCurrentGame().ClearUserMetadata(userMetadata.GetName());
+    this->getGame().ClearUserMetadata(metadata_.GetName());
 
     // Add a new userlist entry if necessary.
     if (!userMetadata.HasNameOnly()) {
       if (logger) {
         logger->trace("Adding new metadata to new userlist entry.");
       }
-      state_.getCurrentGame().AddUserMetadata(userMetadata);
+      this->getGame().AddUserMetadata(userMetadata);
     }
 
     // Save edited userlist.
-    state_.getCurrentGame().SaveUserMetadata();
+    this->getGame().SaveUserMetadata();
   }
 
-  LootState& state_;
+  UnappliedChangeCounter& counter_;
   const bool applyEdits_;
   PluginMetadata metadata_;
 };

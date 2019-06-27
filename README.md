@@ -1,8 +1,9 @@
 # LOOT
 
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/loot/loot?branch=dev&svg=true)](https://ci.appveyor.com/project/WrinklyNinja/loot)
-[![Travis Build Status](https://travis-ci.org/loot/loot.svg?branch=dev)](https://travis-ci.org/loot/loot)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/8hkem2a2cbkkxecf/branch/master?svg=true)](https://ci.appveyor.com/project/LOOT/loot/branch/master)
+[![Travis Build Status](https://travis-ci.org/loot/loot.svg?branch=master)](https://travis-ci.org/loot/loot)
 [![Documentation Status](https://readthedocs.org/projects/loot/badge/?version=latest)](https://loot.readthedocs.io/en/latest/?badge=latest)
+[![Greenkeeper badge](https://badges.greenkeeper.io/loot/loot.svg)](https://greenkeeper.io/)
 
 ## Introduction
 
@@ -32,7 +33,18 @@ Refer to `appveyor.yml` for the build process. The Appveyor configuration assume
 
 ### Linux
 
-Refer to `.travis.yml` for the build process. A [local Docker image](https://docs.travis-ci.com/user/common-build-problems/#Troubleshooting-Locally-in-a-Docker-Image) can be used to ensure the assumed build environment.
+Refer to `.travis.yml` for the build process. It assumes that you have already
+cloned the LOOT repository, that the current working directory is its root, and
+that the following applications are already installed:
+
+- `cmake` v3.6+
+- `curl`
+- `git`
+- `nvm`, or just install Node.js 8+ and ignore the `nvm` call in `.travis.yml`.
+- `python` and `pip` (2.7 or 3, it shouldn't matter)
+- `wget`
+
+(The list above may be incomplete.)
 
 Not all LOOT's features have been implemented for Linux builds. Issues labelled
 `linux` on LOOT's issue tracker cover such missing features where they can be
@@ -45,6 +57,7 @@ LOOT uses the following CMake variables to set build parameters:
 Parameter | Values | Default |Description
 ----------|--------|---------|-----------
 `MSVC_STATIC_RUNTIME` | `ON`, `OFF` | `OFF` | Whether to link the C++ runtime statically or not when building with MSVC.
+`LIBLOOT_URL` | A URL | A GitHub release archive URL | The URL to get the libloot release archive from. By default, this is the URL of a libloot release archive hosted on GitHub. Specifying this is useful if you want to link to a libloot that was built and packaged locally.
 
 You may also need to set `BOOST_ROOT` if CMake cannot find Boost.
 

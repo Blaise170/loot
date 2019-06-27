@@ -1,14 +1,12 @@
-/*
-<link rel="import" href="../../../../bower_components/shadycss/apply-shim.html">
-<link rel="import" href="../../../../bower_components/app-layout/app-toolbar/app-toolbar.html">
-<link rel="import" href="../../../../bower_components/iron-icons/iron-icons.html">
-<link rel="import" href="../../../../bower_components/iron-flex-layout/iron-flex-layout.html">
-<link rel="import" href="../../../../bower_components/paper-icon-button/paper-icon-button.html">
-<link rel="import" href="../../../../bower_components/paper-input/paper-input.html">
-<link rel="import" href="../../../../bower_components/paper-tooltip/paper-tooltip.html">
-*/
+import { PolymerElement, html } from '@polymer/polymer';
+import '@polymer/app-layout/app-toolbar/app-toolbar.js';
+import '@polymer/iron-icons/iron-icons.js';
+import '@polymer/iron-flex-layout/iron-flex-layout.js';
+import '@polymer/paper-icon-button/paper-icon-button.js';
+import '@polymer/paper-input/paper-input.js';
+import '@polymer/paper-tooltip/paper-tooltip.js';
 
-export default class LootSearchToolbar extends Polymer.Element {
+export default class LootSearchToolbar extends PolymerElement {
   static get is() {
     return 'loot-search-toolbar';
   }
@@ -29,7 +27,7 @@ export default class LootSearchToolbar extends Polymer.Element {
   }
 
   static get template() {
-    return Polymer.html`
+    return html`
       <style>
         app-toolbar {
           height: 56px;
@@ -44,7 +42,7 @@ export default class LootSearchToolbar extends Polymer.Element {
           --paper-input-container-color: var(--dark-theme-secondary-color);
           --paper-input-container-underline: {
             border-color: var(--dark-theme-divider-color);
-          };
+          }
 
           display: block;
         }
@@ -55,16 +53,28 @@ export default class LootSearchToolbar extends Polymer.Element {
         }
       </style>
       <app-toolbar>
-        <paper-input id="search" label="Search cards" no-label-float></paper-input>
+        <paper-input
+          id="search"
+          label="Search cards"
+          no-label-float
+        ></paper-input>
         <div id="count">
-          <span>[[_computeResultNum(_currentResult)]]</span>
-          /
+          <span>[[_computeResultNum(_currentResult)]]</span> /
           <span><!-- number of results --></span>
         </div>
-        <paper-icon-button id="prev" icon="expand-less" disabled></paper-icon-button>
-        <paper-icon-button id="next" icon="expand-more" disabled></paper-icon-button>
+        <paper-icon-button
+          id="prev"
+          icon="expand-less"
+          disabled
+        ></paper-icon-button>
+        <paper-icon-button
+          id="next"
+          icon="expand-more"
+          disabled
+        ></paper-icon-button>
         <paper-icon-button id="close" icon="close"></paper-icon-button>
-      </app-toolbar>`;
+      </app-toolbar>
+    `;
   }
 
   _currentResultChanged(newValue) {

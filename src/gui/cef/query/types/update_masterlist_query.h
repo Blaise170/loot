@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -26,14 +26,14 @@ along with LOOT.  If not, see
 #define LOOT_GUI_QUERY_UPDATE_MASTERLIST_QUERY
 
 #include "gui/cef/query/types/metadata_query.h"
-#include "gui/state/game.h"
+#include "gui/state/game/game.h"
 
 namespace loot {
-class UpdateMasterlistQuery : public MetadataQuery {
+template<typename G = gui::Game>
+class UpdateMasterlistQuery : public MetadataQuery<G> {
 public:
-  UpdateMasterlistQuery(LootState& state) :
-      MetadataQuery(state),
-      game_(state.getCurrentGame()) {}
+  UpdateMasterlistQuery(G& game, std::string language) :
+      MetadataQuery<G>(game, language) {}
 
   std::string executeLogic() {
     auto logger = getLogger();
@@ -44,24 +44,22 @@ public:
     if (!updateMasterlist())
       return "null";
 
-    auto plugins = game_.GetPlugins();
-    return generateJsonResponse(plugins.cbegin(), plugins.cend());
+    auto plugins = this->getGame().GetPlugins();
+    return this->generateJsonResponse(plugins.cbegin(), plugins.cend());
   }
 
 private:
   bool updateMasterlist() {
     try {
-      return game_.UpdateMasterlist();
+      return this->getGame().UpdateMasterlist();
     } catch (std::exception&) {
       try {
-        game_.LoadMetadata();
+        this->getGame().LoadMetadata();
       } catch (...) {
       }
       throw;
     }
   }
-
-  gui::Game& game_;
 };
 }
 

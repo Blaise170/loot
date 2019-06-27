@@ -1,15 +1,15 @@
-// <link rel="import" href="../../../../bower_components/polymer/polymer-element.html">
-//
-// link rel="import" href="../../../../bower_components/iron-icon/iron-icon.html">
-// <link rel="import" href="../../../../bower_components/iron-icons/iron-icons.html">
-//
-// <link rel="import" href="../../../../bower_components/paper-item/paper-item.html">
-// <link rel="import" href="../../../../bower_components/paper-item/paper-item-body.html">
-// <link rel="import" href="../../../../bower_components/paper-ripple/paper-ripple.html">
-// <link rel="import" href="../../../../bower_components/paper-tooltip/paper-tooltip.html">
+import { PolymerElement, html } from '@polymer/polymer';
+
+import '@polymer/iron-icon/iron-icon.js';
+import '@polymer/iron-icons/iron-icons.js';
+
+import '@polymer/paper-item/paper-item.js';
+import '@polymer/paper-item/paper-item-body.js';
+import '@polymer/paper-ripple/paper-ripple.js';
+import '@polymer/paper-tooltip/paper-tooltip.js';
 // Also depends on the loot.l10n global.
 
-export default class LootPluginItem extends Polymer.Element {
+export default class LootPluginItem extends PolymerElement {
   static get is() {
     return 'loot-plugin-item';
   }
@@ -40,7 +40,7 @@ export default class LootPluginItem extends Polymer.Element {
   }
 
   static get template() {
-    return Polymer.html`
+    return html`
       <style>
         /* Flip effect for user metadata / editor open icons. */
         #flipper {
@@ -76,7 +76,7 @@ export default class LootPluginItem extends Polymer.Element {
 
           --paper-item-focused-before: {
             opacity: 0;
-          };
+          }
 
           --paper-item-icon-width: 32px;
         }
@@ -84,11 +84,12 @@ export default class LootPluginItem extends Polymer.Element {
           min-height: 32px;
           height: 32px;
         }
-        :host-context(body[data-state=editing]) paper-item-body[two-line] {
+        :host-context(body[data-state='editing']) paper-item-body[two-line] {
           min-height: 40px;
         }
         #icon {
-          border: 1px solid var(--loot-plugin-item-index-border-color, var(--paper-grey-400));
+          border: 1px solid
+            var(--loot-plugin-item-index-border-color, var(--paper-grey-400));
           border-radius: 50%;
           color: var(--secondary-text-color);
           height: 24px;
@@ -103,26 +104,26 @@ export default class LootPluginItem extends Polymer.Element {
         #secondary iron-icon {
           transition: height var(--state-transition-time);
         }
-        :host-context(body[data-state=editing]) #primary {
-            line-height: normal;
+        :host-context(body[data-state='editing']) #primary {
+          line-height: normal;
         }
         #secondary > span {
-            font-size: 0.857rem;
-            color: var(--secondary-text-color);
-            height: 13px;
-            overflow: visible;
+          font-size: 0.857rem;
+          color: var(--secondary-text-color);
+          height: 13px;
+          overflow: visible;
         }
         #secondary iron-icon {
           height: 13px;
           vertical-align: text-bottom;
         }
         iron-icon {
-            color: var(--secondary-text-color);
+          color: var(--secondary-text-color);
         }
         /* When not in edit mode, hide secondary text. */
-        :host-context(body:not([data-state=editing])) #secondary {
-            height: 0;
-            overflow: hidden;
+        :host-context(body:not([data-state='editing'])) #secondary {
+          height: 0;
+          overflow: hidden;
         }
         [hidden],
         #hasUserEdits[hidden] {
@@ -145,23 +146,40 @@ export default class LootPluginItem extends Polymer.Element {
       </style>
       <paper-icon-item>
         <paper-ripple></paper-ripple>
-        <div id="icon" slot="item-icon" class$="[[computeLoadOrderIndexClass(isLightMaster)]]" hidden$="[[!computeLoadOrderIndexText(loadOrderIndex, isLightMaster)]]">[[computeLoadOrderIndexText(loadOrderIndex, isLightMaster)]]</div>
+        <div
+          id="icon"
+          slot="item-icon"
+          class$="[[computeLoadOrderIndexClass(isLightMaster)]]"
+          hidden$="[[!computeLoadOrderIndexText(loadOrderIndex, isLightMaster)]]"
+          text-content="[[computeLoadOrderIndexText(loadOrderIndex, isLightMaster)]]"
+        ></div>
         <paper-item-body two-line>
           <div id="primary"><slot></slot></div>
           <div id="secondary" secondary>
             <span id="groupSpan" hidden$="[[computeIsGroupHidden(group)]]">
               <span>[[group]]</span>
-              <paper-tooltip id="groupTooltip" position="right">Group</paper-tooltip>
+              <paper-tooltip id="groupTooltip" position="right"
+                >Group</paper-tooltip
+              >
             </span>
           </div>
         </paper-item-body>
-        <paper-tooltip for="editorIsOpen" position="left">[[_localise('Editor Is Open')]]</paper-tooltip>
-        <paper-tooltip for="hasUserEdits" position="left">[[_localise('Has User Metadata')]]</paper-tooltip>
+        <paper-tooltip for="editorIsOpen" position="left"
+          >[[_localise('Editor Is Open')]]</paper-tooltip
+        >
+        <paper-tooltip for="hasUserEdits" position="left"
+          >[[_localise('Has User Metadata')]]</paper-tooltip
+        >
         <div id="flipper" class$="[[computeFlipperClass(isEditorOpen)]]">
           <iron-icon id="editorIsOpen" icon="create"></iron-icon>
-          <iron-icon id="hasUserEdits" icon="account-circle" hidden$="[[!hasUserEdits]]"></iron-icon>
+          <iron-icon
+            id="hasUserEdits"
+            icon="account-circle"
+            hidden$="[[!hasUserEdits]]"
+          ></iron-icon>
         </div>
-      </paper-icon-item>`;
+      </paper-icon-item>
+    `;
   }
 
   static _asHexString(number, numberOfDigits) {

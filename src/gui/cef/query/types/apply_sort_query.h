@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -28,32 +28,39 @@ along with LOOT.  If not, see
 #include "gui/cef/query/query.h"
 
 namespace loot {
+template<typename G = gui::Game>
 class ApplySortQuery : public Query {
 public:
-  ApplySortQuery(LootState& state, const std::vector<std::string>& plugins) :
-      state_(state),
+  ApplySortQuery(G& game,
+                 UnappliedChangeCounter& counter,
+                 const std::vector<std::string>& plugins) :
+      game_(game),
+      counter_(counter),
       plugins_(plugins) {}
 
   std::string executeLogic() {
-    auto logger = state_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->trace("User has accepted sorted load order, applying it.");
     }
     try {
-      state_.getCurrentGame().SetLoadOrder(plugins_);
-      state_.decrementUnappliedChangeCounter();
-    }
-    catch (...) {
-      setSortingErrorMessage(state_);
+      game_.SetLoadOrder(plugins_);
+      counter_.DecrementUnappliedChangeCounter();
+    } catch (...) {
+      errorMessage = getSortingErrorMessage(game_);
       throw;
     }
 
     return "";
   }
 
+  std::optional<std::string> getErrorMessage() override { return errorMessage; }
+
 private:
-  LootState& state_;
+  G& game_;
+  UnappliedChangeCounter& counter_;
   const std::vector<std::string> plugins_;
+  std::optional<std::string> errorMessage;
 };
 }
 

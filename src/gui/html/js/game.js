@@ -1,15 +1,16 @@
 import * as _ from 'lodash/core.min';
-import marked from 'marked/marked.min';
 import mergeGroups from './group.js';
 
 import {
+  createMessageItem,
   fillGroupsList,
   initialiseAutocompleteBashTags,
   initialiseAutocompleteFilenames,
-  initialiseGroupsEditor
+  initialiseGroupsEditor,
+  updateGroupsEditorState
 } from './dom.js';
 import Filters from './filters.js';
-import Plugin from './plugin.js';
+import { Plugin } from './plugin.js';
 
 export default class Game {
   constructor(obj, l10n) {
@@ -113,8 +114,7 @@ export default class Game {
       const {
         revision = this._notApplicableString,
         date = this._notApplicableString
-      } =
-        masterlist || {};
+      } = masterlist || {};
 
       document.dispatchEvent(
         new CustomEvent('loot-game-masterlist-change', {
@@ -252,23 +252,25 @@ export default class Game {
     return this.plugins.map(plugin => plugin.name);
   }
 
+  getGroupPluginNames(groupName) {
+    return this.plugins
+      .filter(plugin => plugin.group === groupName)
+      .map(plugin => plugin.name);
+  }
+
   setSortedPlugins(plugins) {
     this.oldLoadOrder = this.plugins;
 
-    const newPlugins = [];
-    plugins.forEach(plugin => {
-      let existingPlugin = this.oldLoadOrder.find(
+    this.plugins = plugins.map(plugin => {
+      const existingPlugin = this.oldLoadOrder.find(
         item => item.name === plugin.name
       );
       if (existingPlugin) {
         existingPlugin.update(plugin);
-      } else {
-        existingPlugin = new Plugin(plugin);
+        return existingPlugin;
       }
-      newPlugins.push(existingPlugin);
+      return new Plugin(plugin);
     });
-
-    this.plugins = newPlugins;
   }
 
   applySort() {
@@ -276,16 +278,17 @@ export default class Game {
   }
 
   cancelSort(plugins, generalMessages) {
-    this.plugins = [];
-    plugins.forEach(plugin => {
+    this.plugins = plugins.reduce((existingPlugins, plugin) => {
       const existingPlugin = this.oldLoadOrder.find(
         item => item.name === plugin.name
       );
       if (existingPlugin) {
         existingPlugin.update(plugin);
-        this.plugins.push(existingPlugin);
+        existingPlugins.push(existingPlugin);
       }
-    });
+
+      return existingPlugins;
+    }, []);
     this.oldLoadOrder = undefined;
 
     /* Update general messages */
@@ -299,8 +302,6 @@ export default class Game {
         item => item.name === plugin.name
       );
       if (existingPlugin) {
-        existingPlugin.userlist = undefined;
-
         existingPlugin.update(plugin);
       }
     });
@@ -313,6 +314,8 @@ export default class Game {
 
     /* Re-initialise conflicts filter plugin list. */
     Filters.fillConflictsFilterList(this.plugins);
+
+    initialiseGroupsEditor(groupName => this.getGroupPluginNames(groupName));
   }
 
   static onPluginsChange(evt) {
@@ -389,11 +392,9 @@ export default class Game {
     /* Add new messages. */
     if (evt.detail.messages) {
       evt.detail.messages.forEach(message => {
-        const li = document.createElement('li');
-        li.className = message.type;
-        /* Use the Marked library for Markdown formatting support. */
-        li.innerHTML = marked(message.text);
-        generalMessagesList.appendChild(li);
+        generalMessagesList.appendChild(
+          createMessageItem(message.type, message.text)
+        );
       });
     }
 
@@ -414,6 +415,6 @@ export default class Game {
 
   static onGroupsChange(evt) {
     fillGroupsList(evt.detail.groups);
-    initialiseGroupsEditor(evt.detail.groups);
+    updateGroupsEditorState(evt.detail.groups);
   }
 }

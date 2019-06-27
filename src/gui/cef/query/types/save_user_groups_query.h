@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2018    WrinklyNinja
+Copyright (C) 2018 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -26,34 +26,35 @@ along with LOOT.  If not, see
 #define LOOT_GUI_QUERY_SAVE_USER_GROUPS_QUERY
 
 #include "gui/cef/query/query.h"
-#include "gui/state/loot_state.h"
+#include "gui/state/game/game.h"
 
 namespace loot {
+template<typename G = gui::Game>
 class SaveUserGroupsQuery : public Query {
 public:
-  SaveUserGroupsQuery(LootState& state, std::unordered_set<Group> groups) :
-      state_(state),
+  SaveUserGroupsQuery(G& game, std::unordered_set<Group> groups) :
+      game_(game),
       groups_(groups) {}
 
   std::string executeLogic() {
-    auto logger = state_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->trace("Setting user groups.");
     }
 
-    state_.getCurrentGame().SetUserGroups(groups_);
-    state_.getCurrentGame().SaveUserMetadata();
+    game_.SetUserGroups(groups_);
+    game_.SaveUserMetadata();
 
     nlohmann::json json = {
-      { "masterlist", state_.getCurrentGame().GetMasterlistGroups() },
-      { "userlist", state_.getCurrentGame().GetUserGroups() },
+        {"masterlist", game_.GetMasterlistGroups()},
+        {"userlist", game_.GetUserGroups()},
     };
     return json.dump();
   }
 
 private:
-  LootState& state_;
-  std::unordered_set<Group> groups_;
+  G& game_;
+  const std::unordered_set<Group> groups_;
 };
 }
 

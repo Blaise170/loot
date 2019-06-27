@@ -37,6 +37,7 @@ function getGitDescription() {
 
 function getLanguageFolders() {
   return [
+    'cs',
     'es',
     'ru',
     'fr',
@@ -91,7 +92,7 @@ function createAppArchive(rootPath, releasePath, tempPath, destPath) {
   if (os.platform() === 'win32') {
     binaries = [
       'LOOT.exe',
-      'loot_api.dll',
+      'loot.dll',
       'chrome_elf.dll',
       'd3dcompiler_47.dll',
       'libEGL.dll',
@@ -109,7 +110,7 @@ function createAppArchive(rootPath, releasePath, tempPath, destPath) {
   } else {
     binaries = [
       'LOOT',
-      'libloot_api.so',
+      'libloot.so',
       'chrome-sandbox',
       'libcef.so',
       'natives_blob.bin',
@@ -163,12 +164,16 @@ function createAppArchive(rootPath, releasePath, tempPath, destPath) {
   fs.removeSync(tempPath);
 }
 
+function replaceInvalidFilenameCharacters(filename) {
+  return filename.replace(/[/<>"|]/g, '-');
+}
+
 function getFilenameSuffix(label, gitDescription) {
   if (label) {
-    return `${gitDescription}_${label}`;
+    return replaceInvalidFilenameCharacters(`${gitDescription}_${label}`);
   }
 
-  return `${gitDescription}`;
+  return replaceInvalidFilenameCharacters(gitDescription);
 }
 
 function getArchiveFileExtension() {

@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -25,12 +25,16 @@ along with LOOT.  If not, see
 #ifndef LOOT_GUI_LOOT_SCHEME_HANDLER_FACTORY
 #define LOOT_GUI_LOOT_SCHEME_HANDLER_FACTORY
 
+#include <filesystem>
+
 #include <include/cef_base.h>
 #include <include/cef_scheme.h>
 
 namespace loot {
 class LootSchemeHandlerFactory : public CefSchemeHandlerFactory {
 public:
+  LootSchemeHandlerFactory(std::filesystem::path resourcesPath);
+
   virtual CefRefPtr<CefResourceHandler> Create(
       CefRefPtr<CefBrowser> browser,
       CefRefPtr<CefFrame> frame,
@@ -38,9 +42,11 @@ public:
       CefRefPtr<CefRequest> request) OVERRIDE;
 
 private:
-  std::string GetPath(const CefString& url) const;
+  std::filesystem::path GetPath(const CefString& url) const;
   std::string GetMimeType(const std::string& file) const;
   CefResponse::HeaderMap GetHeaders() const;
+
+  const std::filesystem::path resourcesPath_;
 
   IMPLEMENT_REFCOUNTING(LootSchemeHandlerFactory);
 };

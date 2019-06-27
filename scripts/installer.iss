@@ -11,7 +11,7 @@
 #include <idplang\spanish.iss>
 
 #define MyAppName "LOOT"
-#define MyAppVersion "0.13.3"
+#define MyAppVersion "0.14.4"
 #define MyAppPublisher "LOOT Team"
 #define MyAppURL "https://loot.github.io"
 #define MyAppExeName "LOOT.exe"
@@ -42,7 +42,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-AppCopyright=Copyright (C) 2009-2018 {#MyAppPublisher}
+AppCopyright=Copyright (C) 2009 {#MyAppPublisher}
 DefaultDirName={pf}\{#MyAppName}
 SourceDir=..\
 OutputBaseFilename=LOOT Installer
@@ -56,6 +56,7 @@ DisableProgramGroupPage=yes
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
+Name: "cs"; MessagesFile: "compiler:Languages\Czech.isl"
 Name: "pt_BR"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 Name: "da"; MessagesFile: "compiler:Languages\Danish.isl"
 Name: "fi"; MessagesFile: "compiler:Languages\Finnish.isl"
@@ -78,7 +79,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#buildir}\Release\LOOT.exe"; \
 DestDir: "{app}"; Flags: ignoreversion
-Source: "{#buildir}\Release\loot_api.dll"; \
+Source: "{#buildir}\Release\loot.dll"; \
 DestDir: "{app}"; Flags: ignoreversion
 Source: "{#buildir}\Release\cef.pak"; \
 DestDir: "{app}"; Flags: ignoreversion
@@ -115,6 +116,8 @@ DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs
 Source: "{#buildir}\Release\resources\ui\*"; \
 DestDir: "{app}\resources\ui"; Flags: ignoreversion recursesubdirs
 
+Source: "resources\l10n\cs\LC_MESSAGES\loot.mo"; \
+DestDir: "{app}\resources\l10n\cs\LC_MESSAGES"; Flags: ignoreversion
 Source: "resources\l10n\da\LC_MESSAGES\loot.mo"; \
 DestDir: "{app}\resources\l10n\da\LC_MESSAGES"; Flags: ignoreversion
 Source: "resources\l10n\de\LC_MESSAGES\loot.mo"; \
@@ -192,6 +195,7 @@ zh_CN.DeleteUserFiles=你想要删除你的设置和用户数据吗？
 #endif
 es.DeleteUserFiles=¿Quieres borrar sus ajustes y metadatos de usuario?
 ja.DeleteUserFiles=設定とユーザーメタデータを削除しますか？
+cs.DeleteUserFiles=Vymazat Uživatelské Soubory
 
 [Code]
 // Set LOOT's language in settings.toml
@@ -260,24 +264,9 @@ var
   InstalledVersionMinor: Cardinal;
   InstalledVersionBld: Cardinal;
 begin
-  VersionMajor := 14;
-  VersionMinor := 0;
-  VersionBld := 24215;
-  RegKey := 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86';
-  IsRuntimeInstalled := 0;
-  InstalledVersionMajor := 0;
-  InstalledVersionMinor := 0;
-  InstalledVersionBld := 0;
+  RegKey := 'Installer\Dependencies\,,x86,14.0,bundle\Dependents\{7e9fae12-5bbf-47fb-b944-09c49e75c061}';
 
-  RegQueryDWordValue(HKLM, RegKey, 'Installed', IsRuntimeInstalled);
-  RegQueryDWordValue(HKLM, RegKey, 'Major', InstalledVersionMajor);
-  RegQueryDWordValue(HKLM, RegKey, 'Minor', InstalledVersionMinor);
-  RegQueryDWordValue(HKLM, RegKey, 'Bld', InstalledVersionBld);
-
-  Result := (IsRuntimeInstalled = 0)
-    or (InstalledVersionMajor < VersionMajor)
-    or (InstalledVersionMinor < VersionMinor)
-    or (InstalledVersionBld < VersionBld);
+  Result := not RegKeyExists(HKEY_CLASSES_ROOT, RegKey);
 end;
 
 // Query user whether their data files should be deleted on uninstall.
@@ -303,7 +292,7 @@ end;
 procedure InitializeWizard();
 begin
   if VCRedistNeedsInstall then begin
-    idpAddFile('https://download.microsoft.com/download/6/A/A/6AA4EDFF-645B-48C5-81CC-ED5963AEAD48/vc_redist.x86.exe', ExpandConstant('{tmp}\vc_redist.x86.exe'));
+    idpAddFile('https://download.visualstudio.microsoft.com/download/pr/749aa419-f9e4-4578-a417-a43786af205e/d59197078cc425377be301faba7dd87a/vc_redist.x86.exe', ExpandConstant('{tmp}\vc_redist.x86.exe'));
 
     idpDownloadAfter(wpReady);
   end

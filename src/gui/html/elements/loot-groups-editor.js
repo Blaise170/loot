@@ -1,6 +1,9 @@
 import cytoscape from 'cytoscape';
 import edgehandles from 'cytoscape-edgehandles';
-import coseBilkent from 'cytoscape-cose-bilkent';
+import dagre from 'cytoscape-dagre';
+import { PolymerElement, html } from '@polymer/polymer';
+import '@polymer/paper-input/paper-input.js';
+import '@polymer/paper-icon-button/paper-icon-button.js';
 import { onOpenReadme } from '../js/events.js';
 
 function graphElements(groups) {
@@ -25,50 +28,49 @@ function graphElements(groups) {
   return nodes.concat(edges);
 }
 
-function onRemoveGraphElement(evt) {
-  if (evt.target === evt.cy || !evt.target.hasClass('userlist')) {
-    return;
-  }
+function removeGraphElement(element) {
+  element.remove();
 
-  evt.target.remove();
-
-  if (evt.target.isEdge()) {
+  if (element.isEdge()) {
     /* Flash selection on source and target nodes to force them to update styling. */
-    evt.target.source().select();
-    evt.target.source().unselect();
-    evt.target.target().select();
-    evt.target.target().unselect();
+    element.source().select();
+    element.source().unselect();
+    element.target().select();
+    element.target().unselect();
   }
 }
 
-export default class LootGroupsEditor extends Polymer.Element {
+export default class LootGroupsEditor extends PolymerElement {
   static get is() {
     return 'loot-groups-editor';
   }
 
   static get template() {
-    return Polymer.html`
+    return html`
       <style>
         :host > div {
-          padding: 0 24px;
+          margin: 0 24px;
           height: calc(100vh - 214px);
           width: calc(100% - 48px);
           position: relative;
+          display: flex;
+          border: var(--divider-color) solid 1px;
+        }
+        #sidebar {
+          display: flex;
+          flex-direction: column;
+          background: var(--primary-background-color);
+          border-left: var(--divider-color) solid 1px;
+          overflow: hidden;
+          padding: 0 8px 8px 8px;
+          min-width: 240px;
         }
         #cy {
-          border: var(--divider-color) solid 1px;
-          height: 100%;
-          width: 100%;
+          flex: auto;
           position: relative;
         }
         .inputContainer {
-          position: absolute;
-          top: 0;
-          right: 22px;
           height: 120px;
-          padding: 0 8px 8px 8px;
-          background: var(--primary-background-color);
-          border: var(--divider-color) solid 1px;
         }
         #groupsHelpText {
           display: block;
@@ -79,14 +81,20 @@ export default class LootGroupsEditor extends Polymer.Element {
           height: 24px;
           width: 24px;
         }
+        #pluginList {
+          background-color: var(--primary-background-color);
+          flex: auto;
+          overflow: auto;
+          white-space: pre;
+        }
         paper-icon-button {
           color: var(--secondary-text-color);
         }
         paper-icon-button[disabled] {
           color: var(--disabled-text-color);
         }
-        paper-icon-button[icon=add]:hover {
-            color: green;
+        paper-icon-button[icon='add']:hover {
+          color: green;
         }
         a {
           color: var(--dark-accent-color);
@@ -95,11 +103,25 @@ export default class LootGroupsEditor extends Polymer.Element {
       </style>
       <div>
         <div id="cy"></div>
-        <div class="inputContainer">
-          <a id="groupsHelpText" href="#">View Documentation</a>
-          <paper-input id="newGroupInput" label="Add a new group" placeholder="Group name" always-float-label>
-            <paper-icon-button id="newGroupButton" icon="add" slot="suffix" disabled></paper-icon-button>
-          </paper-input>
+        <div id="sidebar">
+          <div class="inputContainer">
+            <a id="groupsHelpText" href="#">View Documentation</a>
+            <paper-input
+              id="newGroupInput"
+              label="Add a new group"
+              placeholder="Group name"
+              always-float-label
+            >
+              <paper-icon-button
+                id="newGroupButton"
+                icon="add"
+                slot="suffix"
+                disabled
+              ></paper-icon-button>
+            </paper-input>
+          </div>
+          <h3 id="groupSubtitle"></h3>
+          <div id="pluginList"></div>
         </div>
       </div>
     `;
@@ -109,13 +131,15 @@ export default class LootGroupsEditor extends Polymer.Element {
     super();
     this.cy = undefined;
     this.cyLayoutOptions = {};
+    this.getGroupPluginNames = () => [];
     this.l10n = {
       translate: text => text,
       translateFormatted: text => text
     };
 
     this.messages = {
-      groupAlreadyExists: 'Group already exists!'
+      groupAlreadyExists: 'Group already exists!',
+      noPluginsInGroup: 'No plugins are in this group.'
     };
   }
 
@@ -138,11 +162,15 @@ export default class LootGroupsEditor extends Polymer.Element {
     });
 
     cytoscape.use(edgehandles);
-    cytoscape.use(coseBilkent);
+    cytoscape.use(dagre);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
+  }
+
+  setGroupPluginNamesGetter(getGroupPluginNames) {
+    this.getGroupPluginNames = getGroupPluginNames;
   }
 
   setGroups(groups) {
@@ -199,7 +227,7 @@ export default class LootGroupsEditor extends Polymer.Element {
             width: 2,
             'curve-style': 'bezier',
             'mid-target-arrow-shape': 'triangle',
-            'arrow-scale': 1.25,
+            'arrow-scale': 2,
             'target-endpoint': 'inside-to-node'
           }
         },
@@ -230,17 +258,23 @@ export default class LootGroupsEditor extends Polymer.Element {
     });
 
     this.cyLayoutOptions = {
-      name: 'cose-bilkent',
+      name: 'dagre',
       nodeDimensionsIncludeLabels: true,
-      gravityRange: 1
+      rankDir: 'LR',
+      animate: true,
+      animationDuration: 200
     };
 
-    this.cy.addListener('cxttap', onRemoveGraphElement);
+    this.cy.addListener('cxttap', evt => this._onRemoveGraphElement(evt));
+    this.cy.addListener('select', 'node', evt => this._onSelectNode(evt));
 
     this.cy.edgehandles({
       handlePosition: () => 'middle middle',
       edgeParams: () => ({ classes: 'userlist' })
     });
+
+    this.$.groupSubtitle.textContent = '';
+    this.$.pluginList.textContent = '';
   }
 
   render() {
@@ -278,6 +312,51 @@ export default class LootGroupsEditor extends Polymer.Element {
     this.$.newGroupInput.label = l10n.translate('Add a new group');
     this.$.newGroupInput.placeholder = l10n.translate('Group name');
     this.messages.groupAlreadyExists = l10n.translate('Group already exists!');
+    this.messages.noPluginsInGroup = l10n.translate(
+      'No plugins are in this group.'
+    );
+  }
+
+  _onSelectNode(evt) {
+    if (!evt.target.isNode()) {
+      return;
+    }
+
+    this.$.groupSubtitle.textContent = this.l10n.translateFormatted(
+      'Plugins in %s',
+      evt.target.id()
+    );
+
+    const pluginNames = this.getGroupPluginNames(evt.target.id());
+
+    this.$.pluginList.textContent = '';
+    pluginNames.forEach(pluginName => {
+      this.$.pluginList.textContent += `${pluginName}\n`;
+    });
+
+    if (pluginNames.length === 0) {
+      this.$.pluginList.innerHTML = `<i>${this.messages.noPluginsInGroup}</i>`;
+    }
+  }
+
+  _onRemoveGraphElement(evt) {
+    if (evt.target === evt.cy || !evt.target.hasClass('userlist')) {
+      return;
+    }
+
+    if (
+      evt.target.isNode() &&
+      this.getGroupPluginNames(evt.target.id()).length !== 0
+    ) {
+      return;
+    }
+
+    removeGraphElement(evt.target);
+
+    if (this.$.groupSubtitle.textContent.includes(evt.target.id())) {
+      this.$.groupSubtitle.textContent = '';
+      this.$.pluginList.textContent = '';
+    }
   }
 
   _onAddGroup(evt) {
@@ -289,7 +368,7 @@ export default class LootGroupsEditor extends Polymer.Element {
       }
 
       input = evt.currentTarget;
-      button = evt.currentTarget.nextElementSibling;
+      button = evt.currentTarget.firstElementChild;
     } else {
       input = evt.currentTarget.parentElement;
       button = evt.currentTarget;

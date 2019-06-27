@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -30,15 +30,16 @@ along with LOOT.  If not, see
 #include <json.hpp>
 
 #include "gui/cef/query/query.h"
-#include "gui/state/loot_state.h"
+#include "gui/state/game/games_manager.h"
 
 namespace loot {
 class GetInstalledGamesQuery : public Query {
 public:
-  GetInstalledGamesQuery(LootState& state) : state_(state) {}
+  GetInstalledGamesQuery(const GamesManager& gamesManager) :
+      gamesManager_(gamesManager) {}
 
   std::string executeLogic() {
-    auto logger = state_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->info("Getting LOOT's detected games.");
     }
@@ -48,12 +49,12 @@ public:
 private:
   std::string getInstalledGamesAsJson() const {
     nlohmann::json json;
-    json["installedGames"] = state_.getInstalledGames();
+    json["installedGames"] = gamesManager_.GetInstalledGameFolderNames();
 
     return json.dump();
   }
 
-  LootState& state_;
+  const GamesManager& gamesManager_;
 };
 }
 

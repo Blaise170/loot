@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -25,52 +25,29 @@
 #ifndef LOOT_GUI_STATE_LOOT_STATE
 #define LOOT_GUI_STATE_LOOT_STATE
 
-#define FMT_NO_FMT_STRING_ALIAS
-#define SPDLOG_WCHAR_FILENAMES
-
-#include <spdlog/spdlog.h>
-
-#include "gui/state/game.h"
+#include "gui/state/game/games_manager.h"
 #include "gui/state/loot_settings.h"
+#include "gui/state/unapplied_change_counter.h"
 
 namespace loot {
-class LootState : public LootSettings {
+class LootState : public LootSettings, public UnappliedChangeCounter, public GamesManager, public LootPaths {
 public:
-  LootState();
+  LootState(const std::string& lootDataPath);
 
-  void init(const std::string& cmdLineGame);
+  void init(const std::string& cmdLineGame, bool autoSort);
   const std::vector<std::string>& getInitErrors() const;
 
-  void save(const boost::filesystem::path& file);
+  void save(const std::filesystem::path& file);
 
-  gui::Game& getCurrentGame();
-  void changeGame(const std::string& newGameFolder);
-
-  // Get the folder names of the installed games.
-  std::vector<std::string> getInstalledGames() const;
-
-  bool hasUnappliedChanges() const;
-  void incrementUnappliedChangeCounter();
-  void decrementUnappliedChangeCounter();
-
-  void enableDebugLogging(bool enable);
-  void storeGameSettings(const std::vector<GameSettings>& gameSettings);
-
-  std::shared_ptr<spdlog::logger> getLogger() const;
+  void storeGameSettings(std::vector<GameSettings> gameSettings);
 
 private:
-  // Select initial game.
-  void selectGame(std::string cmdLineGame);
-  void updateStoredGamePathSetting(const gui::Game& game);
+  std::optional<std::filesystem::path> FindGamePath(const GameSettings& gameSettings) const;
+  void InitialiseGameData(gui::Game& game);
 
-  std::shared_ptr<spdlog::logger> logger_;
-  std::string gameAppDataPath;
-  std::list<gui::Game> installedGames_;
-  std::list<gui::Game>::iterator currentGame_;
+  void SetInitialGame(std::string cmdLineGame);
+
   std::vector<std::string> initErrors_;
-
-  // Used to check if LOOT has unaccepted sorting or metadata changes on quit.
-  size_t unappliedChangeCounter_;
 
   // Mutex used to protect access to member variables.
   std::mutex mutex_;

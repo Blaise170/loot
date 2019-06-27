@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2012-2016    WrinklyNinja
+    Copyright (C) 2012 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -25,15 +25,18 @@
 #define LOOT_GUI_STATE_LOGGING
 
 #define FMT_NO_FMT_STRING_ALIAS
+#define SPDLOG_WCHAR_FILENAMES
+
+#include <filesystem>
 
 #include <spdlog/spdlog.h>
 
 namespace loot {
-static const char* LOGGER_NAME = "loot_logger";
+std::shared_ptr<spdlog::logger> getLogger();
 
-inline std::shared_ptr<spdlog::logger> getLogger() {
-  return spdlog::get(LOGGER_NAME);
-}
+void setLogPath(const std::filesystem::path& outputFile);
+
+void enableDebugLogging(bool enable);
 }
 
 #endif

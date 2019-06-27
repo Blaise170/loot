@@ -13,74 +13,127 @@
   "homepage": "https://github.com/loot/loot",
   "private": true,
   "dependencies": {
-    "@octokit/rest": "^15.6.2",
+    "@octokit/rest": "^16.8.0",
+    "@polymer/app-layout": "^3.0.0",
+    "@polymer/iron-flex-layout": "^3.0.0",
+    "@polymer/iron-icon": "^3.0.0",
+    "@polymer/iron-icons": "^3.0.0",
+    "@polymer/iron-iconset-svg": "^3.0.0",
+    "@polymer/iron-list": "^3.0.0",
+    "@polymer/iron-pages": "^3.0.0",
+    "@polymer/neon-animation": "^3.0.0",
+    "@polymer/paper-button": "^3.0.0",
+    "@polymer/paper-checkbox": "^3.0.0",
+    "@polymer/paper-dialog": "^3.0.0",
+    "@polymer/paper-dialog-scrollable": "^3.0.0",
+    "@polymer/paper-dropdown-menu": "^3.0.0",
+    "@polymer/paper-icon-button": "^3.0.0",
+    "@polymer/paper-input": "^3.0.0",
+    "@polymer/paper-item": "^3.0.0",
+    "@polymer/paper-listbox": "^3.0.0",
+    "@polymer/paper-material": "^3.0.0",
+    "@polymer/paper-menu-button": "^3.0.0",
+    "@polymer/paper-progress": "^3.0.0",
+    "@polymer/paper-ripple": "^3.0.0",
+    "@polymer/paper-tabs": "^3.0.0",
+    "@polymer/paper-toast": "^3.0.0",
+    "@polymer/paper-toggle-button": "^3.0.0",
+    "@polymer/paper-tooltip": "^3.0.0",
+    "@polymer/polymer": "3.0.5",
     "cytoscape": "^3.2.11",
-    "cytoscape-cose-bilkent": "^4.0.0",
+    "cytoscape-dagre": "^2.2.2",
     "cytoscape-edgehandles": "^3.2.3",
     "decompress": "^4.0.0",
-    "decompress-unzip": "^4.0.1",
-    "fs-extra": "^5.0.0",
+    "fs-extra": "^7.0.0",
     "jed": "^1.1.1",
     "jed-gettext-parser": "^1.0.0",
     "lodash": "^4.17.5",
-    "marked": "^0.3.17",
-    "polymer-analyzer": "^2.7.0",
-    "replace": "^0.3.0",
-    "request": "^2.79.0"
+    "marked": "^0.6.0",
+    "prop-types": "^15.6.2",
+    "react": "^16.6.3",
+    "react-autosuggest": "^9.3.4",
+    "react-dom": "^16.6.3",
+    "replace": "^1.0.0",
+    "request": "^2.79.0",
+    "web-animations-js": "^2.3.1"
   },
   "devDependencies": {
-    "babel-core": "^6.26.0",
-    "babel-jest": "^22.4.1",
-    "babel-preset-env": "^1.6.1",
-    "bower": "^1.7.1",
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.0.1",
+    "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/preset-react": "^7.0.0",
+    "babel-core": "^7.0.0-bridge.0",
+    "babel-gettext-extractor": "^3.0.0",
+    "babel-jest": "^23.6.0",
+    "babel-loader": "^8.0.2",
     "copy-webpack-plugin": "^4.5.0",
-    "eslint": "^4.18.2",
-    "eslint-config-airbnb-base": "^12.1.0",
-    "eslint-config-prettier": "^2.9.0",
-    "eslint-plugin-html": "^4.0.2",
-    "eslint-plugin-import": "^2.9.0",
-    "eslint-plugin-prettier": "^2.6.0",
+    "eslint": "^5.5.0",
+    "eslint-config-airbnb": "^17.1.0",
+    "eslint-config-prettier": "^3.0.1",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-jsx-a11y": "^6.1.1",
+    "eslint-plugin-prettier": "^3.0.0",
+    "eslint-plugin-react": "^7.11.1",
     "html-webpack-plugin": "^3.0.4",
-    "jest": "^22.4.2",
+    "jest": "^23.6.0",
     "mkdirp": "^0.5.1",
-    "prettier": "^1.11.1",
-    "regenerator-runtime": "^0.11.1",
+    "prettier": "^1.15.1",
     "source-map-loader": "^0.2.3",
     "webpack": "^4.1.0",
-    "webpack-cli": "^2.0.10"
+    "webpack-cli": "^3.1.0"
   },
   "scripts": {
-    "build": "node ./scripts/build_ui.js && webpack",
+    "build": "node ./scripts/get_roboto_files.js && webpack",
     "test": "jest",
-    "lint": "eslint --ignore-path .gitignore ."
+    "lint": "eslint --ignore-path .gitignore --ext .js --ext .jsx ."
   },
   "babel": {
+    "plugins": [
+      "@babel/plugin-proposal-object-rest-spread"
+    ],
     "presets": [
-      "env"
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "chrome": 68
+          }
+        }
+      ],
+      "@babel/preset-react"
     ]
   },
   "eslintConfig": {
+    "parserOptions": {
+      "ecmaFeatures": {
+        "jsx": true
+      }
+    },
     "env": {
       "node": true,
       "browser": true,
       "jest": true
     },
     "globals": {
-      "_": false,
-      "GitHub": false,
-      "Jed": false,
-      "jedGettextParser": false,
-      "loot": false,
-      "marked": false,
-      "Polymer": false
+      "loot": false
     },
     "plugins": [
-      "html",
       "prettier"
     ],
+    "settings": {
+      "import/resolver": {
+        "node": {
+          "extensions": [
+            ".js",
+            ".jsx"
+          ]
+        }
+      }
+    },
     "extends": [
       "eslint:recommended",
-      "airbnb-base",
+      "airbnb",
       "prettier"
     ],
     "rules": {
@@ -101,7 +154,10 @@
       "import/extensions": {
         "js": "always"
       },
-      "prettier/prettier": "error"
+      "prettier/prettier": "error",
+      "react/destructuring-assignment": 0,
+      "react/jsx-one-expression-per-line": 0,
+      "react/sort-comp": 0
     }
   },
   "jest": {

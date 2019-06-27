@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -28,47 +28,47 @@ along with LOOT.  If not, see
 #include <boost/locale.hpp>
 
 #include "gui/cef/query/types/metadata_query.h"
-#include "gui/state/loot_state.h"
+#include "gui/state/game/game.h"
 #include "loot/loot_version.h"
 
 namespace loot {
-class GetGameDataQuery : public MetadataQuery {
+template<typename G = gui::Game>
+class GetGameDataQuery : public MetadataQuery<G> {
 public:
-  GetGameDataQuery(LootState& state, CefRefPtr<CefFrame> frame) :
-      MetadataQuery(state),
-      state_(state),
-      frame_(frame) {}
+  GetGameDataQuery(G& game,
+                   std::string language,
+                   std::function<void(std::string)> sendProgressUpdate) :
+      MetadataQuery<G>(game, language),
+      sendProgressUpdate_(sendProgressUpdate) {}
 
   std::string executeLogic() {
-    sendProgressUpdate(frame_,
-                       boost::locale::translate(
-                           "Parsing, merging and evaluating metadata..."));
+    sendProgressUpdate_(boost::locale::translate(
+        "Parsing, merging and evaluating metadata..."));
 
     /* If the game's plugins object is empty, this is the first time loading
        the game data, so also load the metadata lists. */
-    bool isFirstLoad = state_.getCurrentGame().GetPlugins().empty();
+    bool isFirstLoad = this->getGame().GetPlugins().empty();
 
-    state_.getCurrentGame().LoadAllInstalledPlugins(true);
+    this->getGame().LoadAllInstalledPlugins(true);
 
     if (isFirstLoad)
-      state_.getCurrentGame().LoadMetadata();
+      this->getGame().LoadMetadata();
 
     // Sort plugins into their load order.
     std::vector<std::shared_ptr<const PluginInterface>> installed;
-    std::vector<std::string> loadOrder = state_.getCurrentGame().GetLoadOrder();
+    std::vector<std::string> loadOrder = this->getGame().GetLoadOrder();
     for (const auto& pluginName : loadOrder) {
-      const auto plugin = state_.getCurrentGame().GetPlugin(pluginName);
+      const auto plugin = this->getGame().GetPlugin(pluginName);
       if (plugin) {
         installed.push_back(plugin);
       }
     }
 
-    return generateJsonResponse(installed.cbegin(), installed.cend());
+    return this->generateJsonResponse(installed.cbegin(), installed.cend());
   }
 
 private:
-  LootState& state_;
-  CefRefPtr<CefFrame> frame_;
+  std::function<void(std::string)> sendProgressUpdate_;
 };
 }
 

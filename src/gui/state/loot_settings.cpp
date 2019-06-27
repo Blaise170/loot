@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -24,19 +24,23 @@
 
 #include "gui/state/loot_settings.h"
 
+#include <fstream>
 #include <thread>
 
 #include <cpptoml.h>
 
+#include "gui/state/logging.h"
 #include "gui/state/loot_paths.h"
 #include "gui/version.h"
 
 using std::lock_guard;
 using std::recursive_mutex;
 using std::string;
+using std::filesystem::u8path;
 
 namespace loot {
-GameSettings convert(const std::shared_ptr<cpptoml::table>& table) {
+GameSettings convert(const std::shared_ptr<cpptoml::table>& table,
+                     const std::filesystem::path& lootDataPath) {
   GameSettings game;
 
   auto type = table->get_as<std::string>("type");
@@ -54,9 +58,9 @@ GameSettings convert(const std::shared_ptr<cpptoml::table>& table) {
         GameSettings(GameType::tes5se).FolderName());
     folder = type;
 
-    auto path = LootPaths::getLootDataPath() / "SkyrimSE";
-    if (boost::filesystem::exists(path)) {
-      boost::filesystem::rename(path, LootPaths::getLootDataPath() / *folder);
+    auto path = lootDataPath / "SkyrimSE";
+    if (std::filesystem::exists(path)) {
+      std::filesystem::rename(path, lootDataPath / u8path(*folder));
     }
   }
 
@@ -90,6 +94,11 @@ GameSettings convert(const std::shared_ptr<cpptoml::table>& table) {
     game.SetMaster(*master);
   }
 
+  auto minimumHeaderVersion = table->get_as<double>("minimumHeaderVersion");
+  if (minimumHeaderVersion) {
+    game.SetMinimumHeaderVersion((float)*minimumHeaderVersion);
+  }
+
   auto repo = table->get_as<std::string>("repo");
   if (repo) {
     game.SetRepoURL(*repo);
@@ -108,12 +117,12 @@ GameSettings convert(const std::shared_ptr<cpptoml::table>& table) {
 
   auto path = table->get_as<std::string>("path");
   if (path) {
-    game.SetGamePath(*path);
+    game.SetGamePath(u8path(*path));
   }
 
   auto localPath = table->get_as<std::string>("local_path");
   if (localPath) {
-    game.SetGameLocalPath(*localPath);
+    game.SetGameLocalPath(u8path(*localPath));
   }
 
   auto registry = table->get_as<std::string>("registry");
@@ -148,6 +157,7 @@ LootSettings::LootSettings() :
                             "stall\\Nehrim - At Fate's "
                             "Edge_is1\\InstallLocation"),
     }),
+    autoSort_(false),
     enableDebugLogging_(false),
     updateMasterlist_(true),
     enableLootUpdateCheck_(true),
@@ -155,14 +165,15 @@ LootSettings::LootSettings() :
     language_("en"),
     lastGame_("auto") {}
 
-void LootSettings::load(const boost::filesystem::path& file) {
+void LootSettings::load(const std::filesystem::path& file,
+                        const std::filesystem::path& lootDataPath) {
   lock_guard<recursive_mutex> guard(mutex_);
 
   // Don't use cpptoml::parse_file() as it just uses a std stream,
   // which don't support UTF-8 paths on Windows.
-  boost::filesystem::ifstream in(file);
+  std::ifstream in(file);
   if (!in.is_open())
-    throw cpptoml::parse_exception(file.string() +
+    throw cpptoml::parse_exception(file.u8string() +
                                    " could not be opened for parsing");
 
   auto settings = cpptoml::parser(in).parse();
@@ -186,11 +197,13 @@ void LootSettings::load(const boost::filesystem::path& file) {
   auto windowMaximised = settings->get_qualified_as<bool>("window.maximised");
   if (windowTop && windowBottom && windowLeft && windowRight &&
       windowMaximised) {
-    windowPosition_.top = *windowTop;
-    windowPosition_.bottom = *windowBottom;
-    windowPosition_.left = *windowLeft;
-    windowPosition_.right = *windowRight;
-    windowPosition_.maximised = *windowMaximised;
+    WindowPosition windowPosition;
+    windowPosition.top = *windowTop;
+    windowPosition.bottom = *windowBottom;
+    windowPosition.left = *windowLeft;
+    windowPosition.right = *windowRight;
+    windowPosition.maximised = *windowMaximised;
+    windowPosition_ = windowPosition;
   }
 
   auto games = settings->get_table_array("games");
@@ -199,7 +212,7 @@ void LootSettings::load(const boost::filesystem::path& file) {
 
     for (const auto& game : *games) {
       try {
-        gameSettings_.push_back(convert(game));
+        gameSettings_.push_back(convert(game, lootDataPath));
       } catch (...) {
         // Skip invalid games.
       }
@@ -220,7 +233,7 @@ void LootSettings::load(const boost::filesystem::path& file) {
   }
 }
 
-void LootSettings::save(const boost::filesystem::path& file) {
+void LootSettings::save(const std::filesystem::path& file) {
   lock_guard<recursive_mutex> guard(mutex_);
 
   auto root = cpptoml::make_table();
@@ -233,13 +246,14 @@ void LootSettings::save(const boost::filesystem::path& file) {
   root->insert("lastGame", lastGame_);
   root->insert("lastVersion", lastVersion_);
 
-  if (isWindowPositionStored()) {
+  if (windowPosition_.has_value()) {
+    auto windowPosition = windowPosition_.value();
     auto window = cpptoml::make_table();
-    window->insert("top", windowPosition_.top);
-    window->insert("bottom", windowPosition_.bottom);
-    window->insert("left", windowPosition_.left);
-    window->insert("right", windowPosition_.right);
-    window->insert("maximised", windowPosition_.maximised);
+    window->insert("top", windowPosition.top);
+    window->insert("bottom", windowPosition.bottom);
+    window->insert("left", windowPosition.left);
+    window->insert("right", windowPosition.right);
+    window->insert("maximised", windowPosition.maximised);
     root->insert("window", window);
   }
 
@@ -252,10 +266,11 @@ void LootSettings::save(const boost::filesystem::path& file) {
       game->insert("name", gameSettings.Name());
       game->insert("folder", gameSettings.FolderName());
       game->insert("master", gameSettings.Master());
+      game->insert("minimumHeaderVersion", gameSettings.MinimumHeaderVersion());
       game->insert("repo", gameSettings.RepoURL());
       game->insert("branch", gameSettings.RepoBranch());
-      game->insert("path", gameSettings.GamePath().string());
-      game->insert("local_path", gameSettings.GameLocalPath().string());
+      game->insert("path", gameSettings.GamePath().u8string());
+      game->insert("local_path", gameSettings.GameLocalPath().u8string());
       game->insert("registry", gameSettings.RegistryKey());
       games->push_back(game);
     }
@@ -271,8 +286,14 @@ void LootSettings::save(const boost::filesystem::path& file) {
     root->insert("filters", filters);
   }
 
-  boost::filesystem::ofstream out(file);
+  std::ofstream out(file);
   out << *root;
+}
+
+bool LootSettings::shouldAutoSort() const {
+  lock_guard<recursive_mutex> guard(mutex_);
+
+  return autoSort_;
 }
 
 bool LootSettings::isDebugLoggingEnabled() const {
@@ -291,13 +312,6 @@ bool LootSettings::isLootUpdateCheckEnabled() const {
   lock_guard<recursive_mutex> guard(mutex_);
 
   return enableLootUpdateCheck_;
-}
-
-bool LootSettings::isWindowPositionStored() const {
-  lock_guard<recursive_mutex> guard(mutex_);
-
-  return windowPosition_.top != 0 || windowPosition_.bottom != 0 ||
-         windowPosition_.left != 0 || windowPosition_.right != 0;
 }
 
 std::string LootSettings::getGame() const {
@@ -324,7 +338,8 @@ std::string LootSettings::getLanguage() const {
   return language_;
 }
 
-const LootSettings::WindowPosition& LootSettings::getWindowPosition() const {
+std::optional<LootSettings::WindowPosition> LootSettings::getWindowPosition()
+    const {
   lock_guard<recursive_mutex> guard(mutex_);
 
   return windowPosition_;
@@ -354,10 +369,17 @@ void LootSettings::setLanguage(const std::string& language) {
   language_ = language;
 }
 
+void LootSettings::setAutoSort(bool autoSort) {
+  lock_guard<recursive_mutex> guard(mutex_);
+
+  autoSort_ = autoSort;
+}
+
 void LootSettings::enableDebugLogging(bool enable) {
   lock_guard<recursive_mutex> guard(mutex_);
 
   enableDebugLogging_ = enable;
+  loot::enableDebugLogging(enable);
 }
 
 void LootSettings::updateMasterlist(bool update) {

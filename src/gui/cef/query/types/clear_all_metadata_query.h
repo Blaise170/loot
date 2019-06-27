@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -27,14 +27,14 @@ along with LOOT.  If not, see
 
 #include "gui/cef/query/json.h"
 #include "gui/cef/query/types/metadata_query.h"
-#include "gui/state/game.h"
+#include "gui/state/game/game.h"
 
 namespace loot {
-class ClearAllMetadataQuery : public MetadataQuery {
+template<typename G = gui::Game>
+class ClearAllMetadataQuery : public MetadataQuery<G> {
 public:
-  ClearAllMetadataQuery(LootState& state) :
-      MetadataQuery(state),
-      game_(state.getCurrentGame()) {}
+  ClearAllMetadataQuery(G& game, std::string language) :
+      MetadataQuery<G>(game, language) {}
 
   std::string executeLogic() {
     auto logger = getLogger();
@@ -46,12 +46,14 @@ public:
     auto userlistPluginNames = getUserlistPluginNames();
 
     // Clear the user metadata.
-    game_.ClearAllUserMetadata();
-    game_.SaveUserMetadata();
+    this->getGame().ClearAllUserMetadata();
+    this->getGame().SaveUserMetadata();
 
     if (logger) {
-      logger->trace("Rederiving display metadata for {} plugins that had user "
-                    "metadata.", userlistPluginNames.size());
+      logger->trace(
+          "Rederiving display metadata for {} plugins that had user "
+          "metadata.",
+          userlistPluginNames.size());
     }
 
     return getDerivedMetadataJson(userlistPluginNames);
@@ -60,8 +62,8 @@ public:
 private:
   std::vector<std::string> getUserlistPluginNames() const {
     std::vector<std::string> userlistPluginNames;
-    for (const auto& plugin : game_.GetPlugins()) {
-      if (!game_.GetUserMetadata(plugin->GetName()).HasNameOnly()) {
+    for (const auto& plugin : this->getGame().GetPlugins()) {
+      if (this->getGame().GetUserMetadata(plugin->GetName()).has_value()) {
         userlistPluginNames.push_back(plugin->GetName());
       }
     }
@@ -75,13 +77,14 @@ private:
 
     json["plugins"] = nlohmann::json::array();
     for (const auto& pluginName : userlistPluginNames) {
-      json["plugins"].push_back(generateDerivedMetadata(pluginName));
+      auto derivedMetadata = this->generateDerivedMetadata(pluginName);
+      if (derivedMetadata.has_value()) {
+        json["plugins"].push_back(derivedMetadata.value());
+      }
     }
 
     return json.dump();
   }
-
-  gui::Game& game_;
 };
 }
 

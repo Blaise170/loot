@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -29,10 +29,14 @@ along with LOOT.  If not, see
 #include "gui/cef/query/types/clipboard_query.h"
 
 namespace loot {
+template<typename G = gui::Game>
 class CopyMetadataQuery : public ClipboardQuery {
 public:
-  CopyMetadataQuery(LootState& state, const std::string& pluginName) :
-      state_(state),
+  CopyMetadataQuery(const G& game,
+                    std::string language,
+                    std::string pluginName) :
+      game_(game),
+      language_(language),
       pluginName_(pluginName) {}
 
   std::string executeLogic() {
@@ -42,10 +46,17 @@ public:
     }
 
     // Get metadata from masterlist and userlist.
-    PluginMetadata metadata =
-        state_.getCurrentGame().GetMasterlistMetadata(pluginName_);
-    metadata.MergeMetadata(
-        state_.getCurrentGame().GetUserMetadata(pluginName_));
+    PluginMetadata metadata(pluginName_);
+
+    auto masterlistMetadata = game_.GetMasterlistMetadata(pluginName_);
+    if (masterlistMetadata.has_value()) {
+      metadata.MergeMetadata(masterlistMetadata.value());
+    }
+
+    auto userMetadata = game_.GetUserMetadata(pluginName_);
+    if (userMetadata.has_value()) {
+      metadata.MergeMetadata(userMetadata.value());
+    }
 
     // Generate text representation.
     std::string text =
@@ -54,9 +65,8 @@ public:
     copyToClipboard(text);
 
     if (logger) {
-      logger->debug("Exported userlist metadata text for \"{}\": {}",
-        pluginName_,
-        text);
+      logger->debug(
+          "Exported userlist metadata text for \"{}\": {}", pluginName_, text);
     }
 
     return "";
@@ -64,11 +74,12 @@ public:
 
 private:
   std::string asText(const PluginMetadata& metadata) {
-    return to_json_with_language(metadata, state_.getLanguage()).dump(4);
+    return to_json_with_language(metadata, language_).dump(4);
   }
 
-  LootState& state_;
-  std::string pluginName_;
+  const G& game_;
+  const std::string language_;
+  const std::string pluginName_;
 };
 }
 

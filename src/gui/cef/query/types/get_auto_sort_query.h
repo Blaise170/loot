@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -22,25 +22,36 @@ along with LOOT.  If not, see
 <https://www.gnu.org/licenses/>.
 */
 
-#ifndef LOOT_GUI_QUERY_CANCEL_FIND_QUERY
-#define LOOT_GUI_QUERY_CANCEL_FIND_QUERY
+#ifndef LOOT_GUI_QUERY_GET_AUTO_SORT_QUERY
+#define LOOT_GUI_QUERY_GET_AUTO_SORT_QUERY
 
-#include <include/cef_browser.h>
+#undef min
+
+#include <json.hpp>
 
 #include "gui/cef/query/query.h"
+#include "gui/state/loot_settings.h"
 
 namespace loot {
-class CancelFindQuery : public Query {
+class GetAutoSortQuery : public Query {
 public:
-  CancelFindQuery(CefRefPtr<CefBrowser> browser) : browser_(browser) {}
+  GetAutoSortQuery(const LootSettings& settings) : settings_(settings) {}
 
   std::string executeLogic() {
-    browser_->GetHost()->StopFinding(true);
-    return "";
+    auto logger = getLogger();
+    if (logger) {
+      logger->info("Getting whether or not LOOT was run to auto-sort.");
+    }
+
+    nlohmann::json json = {
+        {"autoSort", settings_.shouldAutoSort()},
+    };
+
+    return json.dump();
   }
 
 private:
-  const CefRefPtr<CefBrowser> browser_;
+  const LootSettings& settings_;
 };
 }
 

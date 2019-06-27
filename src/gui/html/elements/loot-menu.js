@@ -1,20 +1,20 @@
-// import {PolymerElement} from '@polymer/polymer/polymer-element.js';
-// import {PaperListbox} from 'paper-listbox/paper-listbox.js">
+import { PolymerElement, html } from '@polymer/polymer';
+import '@polymer/paper-listbox/paper-listbox.js';
 
-export default class LootMenu extends Polymer.Element {
+export default class LootMenu extends PolymerElement {
   static get is() {
     return 'loot-menu';
   }
 
   static get template() {
-    return Polymer.html`<style>
+    return html`
+      <style>
         ::slotted(*:not([disabled])) {
           cursor: pointer;
         }
       </style>
-      <paper-listbox id="menu" multi>
-        <slot></slot>
-      </paper-listbox>`;
+      <paper-listbox id="menu" multi> <slot></slot> </paper-listbox>
+    `;
   }
 
   connectedCallback() {

@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -31,15 +31,57 @@
 #include "gui/cef/loot_handler.h"
 #include "gui/cef/loot_scheme_handler_factory.h"
 #include "gui/cef/window_delegate.h"
+#include "gui/state/logging.h"
 #include "gui/state/loot_paths.h"
 
 namespace loot {
-void LootApp::Initialise(const std::string& defaultGame,
-                         const std::string& lootDataPath,
-                         const std::string& url) {
-  LootPaths::initialise(lootDataPath);
-  lootState_.init(defaultGame);
-  url_ = url;
+#ifdef _WIN32
+CommandLineOptions::CommandLineOptions() : CommandLineOptions(0, nullptr) {}
+#endif
+
+CommandLineOptions::CommandLineOptions(int argc, const char* const* argv) :
+    autoSort(false),
+    url("http://loot/ui/index.html") {
+  // Record command line arguments.
+  CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
+
+  if (!command_line) {
+    return;
+  }
+
+#ifdef _WIN32
+  command_line->InitFromString(::GetCommandLineW());
+#else
+  command_line->InitFromArgv(argc, argv);
+#endif
+
+  if (command_line->HasSwitch("game")) {
+    defaultGame = command_line->GetSwitchValue("game");
+  }
+
+  if (command_line->HasSwitch("loot-data-path")) {
+    lootDataPath = command_line->GetSwitchValue("loot-data-path");
+  }
+
+  autoSort = command_line->HasSwitch("auto-sort");
+
+  if (command_line->HasArguments()) {
+    std::vector<CefString> arguments;
+    command_line->GetArguments(arguments);
+    url = arguments[0];
+    auto logger = getLogger();
+    if (logger) {
+      logger->info("Loading homepage using URL: {}", url);
+    }
+  }
+}
+
+LootApp::LootApp(CommandLineOptions options) :
+  commandLineOptions_(options),
+    lootState_(options.lootDataPath) {}
+
+std::filesystem::path LootApp::getL10nPath() const {
+  return lootState_.getL10nPath();
 }
 
 void LootApp::OnBeforeCommandLineProcessing(
@@ -66,39 +108,26 @@ void LootApp::OnContextInitialized() {
   // Make sure this is running in the UI thread.
   assert(CefCurrentlyOn(TID_UI));
 
+  // Initialise LOOT's state.
+  lootState_.init(commandLineOptions_.defaultGame, commandLineOptions_.autoSort);
+
   // Set the handler for browser-level callbacks.
   CefRefPtr<LootHandler> handler(new LootHandler(lootState_));
 
   // Register the custom "loot" domain handler.
   CefRegisterSchemeHandlerFactory(
-      "http", "loot", new LootSchemeHandlerFactory());
+      "http",
+      "loot",
+      new LootSchemeHandlerFactory(lootState_.getResourcesPath()));
 
   // Specify CEF browser settings here.
   CefBrowserSettings browser_settings;
 
-  // Need to set the global locale for this process so that messages will
-  // be translated.
-  auto logger = lootState_.getLogger();
-  if (logger) {
-    logger->debug("Initialising language settings in UI thread.");
-  }
-  if (lootState_.getLanguage() != MessageContent::defaultLanguage) {
-    boost::locale::generator gen;
-    gen.add_messages_path(LootPaths::getL10nPath().string());
-    gen.add_messages_domain("loot");
-
-    if (logger) {
-      logger->debug("Selected language: {}", lootState_.getLanguage());
-    }
-    std::locale::global(gen(lootState_.getLanguage() + ".UTF-8"));
-    loot::InitialiseLocale(lootState_.getLanguage() + ".UTF-8");
-    boost::filesystem::path::imbue(std::locale());
-  }
-
   CefRefPtr<CefBrowserView> browser_view = CefBrowserView::CreateBrowserView(
-      handler, url_, browser_settings, NULL, NULL);
+      handler, commandLineOptions_.url, browser_settings, NULL, NULL);
 
-  CefWindow::CreateTopLevelWindow(new WindowDelegate(browser_view, lootState_));
+  CefWindow::CreateTopLevelWindow(
+      new WindowDelegate(browser_view, lootState_.getWindowPosition()));
 }
 
 void LootApp::OnWebKitInitialized() {

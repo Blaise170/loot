@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -35,7 +35,7 @@ along with LOOT.  If not, see
 namespace loot {
 class GetInitErrorsQuery : public Query {
 public:
-  GetInitErrorsQuery(LootState& state) : state_(state) {}
+  GetInitErrorsQuery(const LootState& state) : state_(state) {}
 
   std::string executeLogic() {
     nlohmann::json json;
@@ -45,7 +45,7 @@ public:
   }
 
 private:
-  LootState& state_;
+  const LootState& state_;
 };
 }
 

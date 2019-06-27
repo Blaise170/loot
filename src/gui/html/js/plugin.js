@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2013-2018    WrinklyNinja
+    Copyright (C) 2013 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -53,6 +53,11 @@ function deduplicateTags(currentTags, suggestedTags) {
     add: additionTagNames.join(', '),
     remove: filteredRemovalTagNames.join(', ')
   };
+}
+
+export function crcToString(crc) {
+  /* Pad CRC string to 8 characters. */
+  return `00000000${crc.toString(16).toUpperCase()}`.slice(-8);
 }
 
 /* Messages, tags, CRCs and version strings can all be hidden by filters.
@@ -122,7 +127,7 @@ class PluginCardContent {
     }
 
     /* Pad CRC string to 8 characters. */
-    return `00000000${this._crc.toString(16).toUpperCase()}`.slice(-8);
+    return crcToString(this._crc);
   }
 
   get tags() {
@@ -165,7 +170,7 @@ class PluginCardContent {
   }
 }
 
-export default class Plugin {
+export class Plugin {
   constructor(obj) {
     /* Plugin data */
     this.name = obj.name;
@@ -208,6 +213,29 @@ export default class Plugin {
     Object.getOwnPropertyNames(plugin).forEach(property => {
       this[property] = plugin[property];
     });
+
+    /* Set default values for fields that may not be present. */
+    if (plugin.version === undefined) {
+      this.version = '';
+    }
+    if (plugin.crc === undefined) {
+      this.crc = 0;
+    }
+    if (plugin.group === undefined) {
+      this.group = 'default';
+    }
+    if (plugin.loadOrderIndex === undefined) {
+      this.loadOrderIndex = undefined;
+    }
+    if (plugin.cleanedWith === undefined) {
+      this.cleanedWith = '';
+    }
+    if (plugin.masterlist === undefined) {
+      this.masterlist = undefined;
+    }
+    if (plugin.userlist === undefined) {
+      this.userlist = undefined;
+    }
   }
 
   static fromJson(key, value) {

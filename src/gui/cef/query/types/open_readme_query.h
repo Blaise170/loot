@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -25,6 +25,8 @@ along with LOOT.  If not, see
 #ifndef LOOT_GUI_QUERY_OPEN_README_QUERY
 #define LOOT_GUI_QUERY_OPEN_README_QUERY
 
+#include <boost/algorithm/string.hpp>
+
 #include "gui/cef/query/query.h"
 #include "gui/helpers.h"
 #include "gui/state/loot_paths.h"
@@ -32,7 +34,9 @@ along with LOOT.  If not, see
 namespace loot {
 class OpenReadmeQuery : public Query {
 public:
-  OpenReadmeQuery(const std::string& relativeFilePath) :
+  OpenReadmeQuery(const std::filesystem::path readmePath,
+    const std::string& relativeFilePath) :
+      readmePath_(readmePath),
       relativeFilePath_(relativeFilePath) {}
 
   std::string executeLogic() {
@@ -41,13 +45,13 @@ public:
       logger->info("Opening LOOT's readme.");
     }
 
-    auto canonicalPath = boost::filesystem::canonical(
-        LootPaths::getReadmePath() / relativeFilePath_);
+    auto canonicalPath = std::filesystem::canonical(
+        readmePath_ / relativeFilePath_);
     auto canonicalReadmePath =
-        boost::filesystem::canonical(LootPaths::getReadmePath());
+        std::filesystem::canonical(readmePath_);
 
-    if (!boost::starts_with(canonicalPath.string(),
-                            canonicalReadmePath.string())) {
+    if (!boost::starts_with(canonicalPath.u8string(),
+                            canonicalReadmePath.u8string())) {
       throw std::runtime_error(
           "Attempted to open readme file outside of recognised readme "
           "directory.");
@@ -59,6 +63,7 @@ public:
   }
 
 private:
+  const std::filesystem::path readmePath_;
   const std::string relativeFilePath_;
 };
 }

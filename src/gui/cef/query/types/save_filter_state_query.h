@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -26,31 +26,31 @@ along with LOOT.  If not, see
 #define LOOT_GUI_QUERY_SAVE_FILTER_STATE_QUERY
 
 #include "gui/cef/query/query.h"
-#include "gui/state/loot_state.h"
+#include "gui/state/loot_settings.h"
 
 namespace loot {
 class SaveFilterStateQuery : public Query {
 public:
-  SaveFilterStateQuery(LootState& state,
+  SaveFilterStateQuery(LootSettings& settings,
                        const std::string& filterId,
                        bool enabled) :
-      state_(state),
+      settings_(settings),
       filterId_(filterId),
       enabled_(enabled) {}
 
   std::string executeLogic() {
-    auto logger = state_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->trace("Saving filter states.");
     }
-    state_.storeFilterState(filterId_, enabled_);
+    settings_.storeFilterState(filterId_, enabled_);
     return "";
   }
 
 private:
-  LootState& state_;
-  std::string filterId_;
-  bool enabled_;
+  LootSettings& settings_;
+  const std::string filterId_;
+  const bool enabled_;
 };
 }
 

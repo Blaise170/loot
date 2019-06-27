@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -30,15 +30,19 @@ along with LOOT.  If not, see
 #include <include/cef_parser.h>
 #include <include/wrapper/cef_stream_resource_handler.h>
 
-#include <boost/algorithm/string.hpp>
 #include <string>
 
 using namespace std;
+
+using std::filesystem::u8path;
 
 namespace loot {
 ///////////////////////////////
 // LootSchemeHandlerFactory
 ///////////////////////////////
+
+LootSchemeHandlerFactory::LootSchemeHandlerFactory(
+  std::filesystem::path resourcesPath) : resourcesPath_(resourcesPath) {}
 
 CefRefPtr<CefResourceHandler> LootSchemeHandlerFactory::Create(
     CefRefPtr<CefBrowser> browser,
@@ -49,19 +53,19 @@ CefRefPtr<CefResourceHandler> LootSchemeHandlerFactory::Create(
   if (logger) {
     logger->info("Handling request to URL: {}", request->GetURL().ToString());
   }
-  const string filePath = GetPath(request->GetURL());
+  auto filePath = GetPath(request->GetURL());
 
-  if (boost::filesystem::exists(filePath)) {
+  if (std::filesystem::exists(filePath)) {
     return new CefStreamResourceHandler(
         200,
         "OK",
-        GetMimeType(filePath),
+        GetMimeType(filePath.u8string()),
         GetHeaders(),
-        CefStreamReader::CreateForFile(filePath));
+        CefStreamReader::CreateForFile(filePath.u8string()));
   }
 
   if (logger) {
-    logger->trace("File {} not found, sending 404.", filePath);
+    logger->trace("File {} not found, sending 404.", filePath.u8string());
   }
   const string error404 = "File not found.";
   CefRefPtr<CefStreamReader> stream =
@@ -70,12 +74,14 @@ CefRefPtr<CefResourceHandler> LootSchemeHandlerFactory::Create(
       404, "Not Found", "text/plain", GetHeaders(), stream);
 }
 
-std::string LootSchemeHandlerFactory::GetPath(const CefString& url) const {
+std::filesystem::path LootSchemeHandlerFactory::GetPath(const CefString& url) const {
   CefURLParts urlParts;
   CefParseURL(url, urlParts);
 
-  return (LootPaths::getResourcesPath() / CefString(&urlParts.path).ToString())
-      .string();
+  // Trim the leading slash from urlPath so the full path gets built correctly.
+  auto urlPath = CefString(&urlParts.path).ToString().substr(1);
+
+  return resourcesPath_ / u8path(urlPath);
 }
 
 std::string LootSchemeHandlerFactory::GetMimeType(

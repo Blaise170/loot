@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -24,15 +24,25 @@
 #ifndef LOOT_GUI_HELPERS
 #define LOOT_GUI_HELPERS
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 namespace loot {
-void OpenInDefaultApplication(const boost::filesystem::path& file);
+void OpenInDefaultApplication(const std::filesystem::path& file);
 
 #ifdef _WIN32
 std::wstring ToWinWide(const std::string& str);
 
 std::string FromWinWide(const std::wstring& wstr);
+
+std::string RegKeyStringValue(const std::string& rootKey,
+  const std::string& subkey,
+  const std::string& value);
 #endif
+
+// Compare strings as if they're filenames, respecting filesystem case
+// insensitivity on Windows. Returns -1 if lhs < rhs, 0 if lhs == rhs, and 1 if
+// lhs > rhs. The comparison may give different results on Linux, but is still
+// locale-invariant.
+int CompareFilenames(const std::string& lhs, const std::string& rhs);
 }
 #endif

@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2012-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -22,19 +22,30 @@
     <https://www.gnu.org/licenses/>.
     */
 
-#ifndef LOOT_GUI_GAME_DETECTION_ERROR
-#define LOOT_GUI_GAME_DETECTION_ERROR
-
-#include <stdexcept>
+#ifndef LOOT_GUI_STATE_UNAPPLIED_CHANGE_COUNTER
+#define LOOT_GUI_STATE_UNAPPLIED_CHANGE_COUNTER
 
 namespace loot {
-/**
- * @brief An exception class thrown if an error occurs when detecting installed
- *        games.
- */
-class GameDetectionError : public std::runtime_error {
+class UnappliedChangeCounter {
 public:
-  using std::runtime_error::runtime_error;
+  UnappliedChangeCounter() : unappliedChangeCounter_(0) {}
+
+  bool HasUnappliedChanges() const {
+    return unappliedChangeCounter_ > 0;
+  }
+
+  void IncrementUnappliedChangeCounter() {
+    ++unappliedChangeCounter_;
+  }
+
+  void DecrementUnappliedChangeCounter()  {
+    if (unappliedChangeCounter_ > 0) {
+      --unappliedChangeCounter_;
+    }
+  }
+
+private:
+  size_t unappliedChangeCounter_;
 };
 }
 

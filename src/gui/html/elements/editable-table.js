@@ -1,43 +1,33 @@
-// import {PolymerElement} from '@polymer/polymer/polymer-element.js';
-// <link rel="import" href="../../../../bower_components/polymer/lib/utils/render-status.html">
+import { PolymerElement, html } from '@polymer/polymer';
+import { beforeNextRender } from '@polymer/polymer/lib/utils/render-status';
+import './editable-table-rows.js';
 
 function getRowTemplate(templateId) {
-  let template = document.getElementById(templateId);
-  if (!template) {
-    template = document.querySelector(
-      `link[rel="import"][href$="editable-table-rows.html"]`
-    ).import;
-  }
-  template = template.querySelector(`#${templateId}`);
-
-  if (template.tagName !== 'TEMPLATE') {
-    return template.querySelector('template');
-  }
-
-  return template;
+  return document.getElementById(templateId);
 }
 
-export default class EditableTable extends Polymer.Element {
+export default class EditableTable extends PolymerElement {
   static get is() {
     return 'editable-table';
   }
 
   static get template() {
-    return Polymer.html`
+    return html`
       <style>
-      ::slotted(table) {
+        ::slotted(table) {
           background-color: inherit;
           border-collapse: collapse;
           width: 100%;
-      }
+        }
       </style>
-      <slot></slot>`;
+      <slot></slot>
+    `;
   }
 
   connectedCallback() {
     super.connectedCallback();
 
-    Polymer.RenderStatus.beforeNextRender(this, () => {
+    beforeNextRender(this, () => {
       /* Add "add new row" row. */
       const content = getRowTemplate('newRow').content;
       let row = document.importNode(content, true);
@@ -112,12 +102,6 @@ export default class EditableTable extends Polymer.Element {
         );
         for (let j = 0; j < inputs.length; j += 1) {
           rowData[inputs[j].className] = (inputs[j].value || '').trim();
-        }
-        const autocompletes = rows[i].getElementsByTagName(
-          'paper-autocomplete'
-        );
-        for (let j = 0; j < autocompletes.length; j += 1) {
-          rowData[autocompletes[j].className] = autocompletes[j].text.trim();
         }
 
         writableRows.push(rowData);
@@ -213,11 +197,7 @@ export default class EditableTable extends Polymer.Element {
     Object.entries(tableData).forEach(([key, value]) => {
       const elems = row.getElementsByClassName(key);
       if (value !== undefined && elems.length === 1) {
-        if (elems[0].tagName === 'PAPER-AUTOCOMPLETE') {
-          elems[0].text = value;
-        } else {
-          elems[0].value = value;
-        }
+        elems[0].value = value;
       }
     });
 

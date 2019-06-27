@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -27,27 +27,30 @@ along with LOOT.  If not, see
 
 #include "gui/cef/query/json.h"
 #include "gui/cef/query/types/metadata_query.h"
-#include "gui/state/game.h"
+#include "gui/state/game/game.h"
 
 namespace loot {
-class GetConflictingPluginsQuery : public MetadataQuery {
+template<typename G = gui::Game>
+class GetConflictingPluginsQuery : public MetadataQuery<G> {
 public:
-  GetConflictingPluginsQuery(LootState& state, const std::string& pluginName) :
-      MetadataQuery(state),
-      game_(state.getCurrentGame()),
+  GetConflictingPluginsQuery(G& game,
+                             std::string language,
+                             std::string pluginName) :
+      MetadataQuery<G>(game, language),
       pluginName_(pluginName) {}
 
   std::string executeLogic() {
-    logger_ = getLogger();
-    if (logger_) {
-      logger_->debug("Searching for plugins that conflict with {}", pluginName_);
+    auto logger = getLogger();
+    if (logger) {
+      logger->debug("Searching for plugins that conflict with {}",
+                     pluginName_);
     }
 
     // Checking for FormID overlap will only work if the plugins have been
     // loaded, so check if the plugins have been fully loaded, and if not load
     // all plugins.
-    if (!game_.ArePluginsFullyLoaded())
-      game_.LoadAllInstalledPlugins(false);
+    if (!this->getGame().ArePluginsFullyLoaded())
+      this->getGame().LoadAllInstalledPlugins(false);
 
     return getJsonResponse();
   }
@@ -55,20 +58,20 @@ public:
 private:
   std::string getJsonResponse() {
     nlohmann::json json = {
-        {"generalMessages", getGeneralMessages()},
+        {"generalMessages", this->getGeneralMessages()},
         {"plugins", nlohmann::json::array()},
     };
 
-    auto plugin = game_.GetPlugin(pluginName_);
+    auto plugin = this->getGame().GetPlugin(pluginName_);
     if (!plugin) {
       throw std::runtime_error("The plugin \"" + pluginName_ +
                                "\" is not loaded.");
     }
 
-    for (const auto& otherPlugin : game_.GetPlugins()) {
+    for (const auto& otherPlugin : this->getGame().GetPlugins()) {
       json["plugins"].push_back({
-        { "metadata", generateDerivedMetadata(otherPlugin) },
-        { "conflicts", doPluginsConflict(plugin, otherPlugin) },
+          {"metadata", this->generateDerivedMetadata(otherPlugin)},
+          {"conflicts", doPluginsConflict(plugin, otherPlugin)},
       });
     }
 
@@ -79,18 +82,13 @@ private:
       const std::shared_ptr<const PluginInterface>& plugin,
       const std::shared_ptr<const PluginInterface>& otherPlugin) {
     if (plugin->DoFormIDsOverlap(*otherPlugin)) {
-      if (logger_) {
-        logger_->debug("Found conflicting plugin: {}", otherPlugin->GetName());
-      }
       return true;
     } else {
       return false;
     }
   }
 
-  gui::Game& game_;
   const std::string pluginName_;
-  std::shared_ptr<spdlog::logger> logger_;
 };
 }
 

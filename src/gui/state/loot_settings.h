@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -25,14 +25,14 @@
 #ifndef LOOT_GUI_STATE_LOOT_SETTINGS
 #define LOOT_GUI_STATE_LOOT_SETTINGS
 
+#include <filesystem>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
-#include <boost/filesystem.hpp>
-
-#include "gui/state/game_settings.h"
+#include "gui/state/game/game_settings.h"
 
 namespace loot {
 class LootSettings {
@@ -49,23 +49,25 @@ public:
 
   LootSettings();
 
-  void load(const boost::filesystem::path& file);
-  void save(const boost::filesystem::path& file);
+  void load(const std::filesystem::path& file,
+            const std::filesystem::path& lootDataPath);
+  void save(const std::filesystem::path& file);
 
+  bool shouldAutoSort() const;
   bool isDebugLoggingEnabled() const;
   bool updateMasterlist() const;
   bool isLootUpdateCheckEnabled() const;
-  bool isWindowPositionStored() const;
   std::string getGame() const;
   std::string getLastGame() const;
   std::string getLastVersion() const;
   std::string getLanguage() const;
-  const WindowPosition& getWindowPosition() const;
+  std::optional<WindowPosition> getWindowPosition() const;
   const std::vector<GameSettings>& getGameSettings() const;
   const std::map<std::string, bool>& getFilters() const;
 
   void setDefaultGame(const std::string& game);
   void setLanguage(const std::string& language);
+  void setAutoSort(bool autSort);
   void enableDebugLogging(bool enable);
   void updateMasterlist(bool update);
   void enableLootUpdateCheck(bool enable);
@@ -77,6 +79,7 @@ public:
   void updateLastVersion();
 
 private:
+  bool autoSort_;
   bool enableDebugLogging_;
   bool updateMasterlist_;
   bool enableLootUpdateCheck_;
@@ -84,7 +87,7 @@ private:
   std::string lastGame_;
   std::string lastVersion_;
   std::string language_;
-  WindowPosition windowPosition_;
+  std::optional<WindowPosition> windowPosition_;
   std::vector<GameSettings> gameSettings_;
   std::map<std::string, bool> filters_;
 

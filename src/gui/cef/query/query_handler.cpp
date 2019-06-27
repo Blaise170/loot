@@ -3,7 +3,7 @@
     A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
     Fallout: New Vegas.
 
-    Copyright (C) 2014-2018    WrinklyNinja
+    Copyright (C) 2014 WrinklyNinja
 
     This file is part of LOOT.
 
@@ -24,23 +24,20 @@
 
 #include "gui/cef/query/query_handler.h"
 
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <string>
 
-#include <boost/filesystem.hpp>
 #include <include/base/cef_bind.h>
 #include <include/cef_app.h>
 #include <include/cef_task.h>
 #include <include/wrapper/cef_closure_task.h>
-#include <boost/filesystem.hpp>
-#include <boost/format.hpp>
-#include <boost/locale.hpp>
 
 #include "gui/cef/loot_app.h"
 #include "gui/cef/loot_handler.h"
+#include "gui/cef/query/query_executor.h"
 #include "gui/cef/query/types/apply_sort_query.h"
-#include "gui/cef/query/types/cancel_find_query.h"
 #include "gui/cef/query/types/cancel_sort_query.h"
 #include "gui/cef/query/types/change_game_query.h"
 #include "gui/cef/query/types/clear_all_metadata_query.h"
@@ -52,6 +49,7 @@
 #include "gui/cef/query/types/discard_unapplied_changes_query.h"
 #include "gui/cef/query/types/editor_closed_query.h"
 #include "gui/cef/query/types/editor_opened_query.h"
+#include "gui/cef/query/types/get_auto_sort_query.h"
 #include "gui/cef/query/types/get_conflicting_plugins_query.h"
 #include "gui/cef/query/types/get_game_data_query.h"
 #include "gui/cef/query/types/get_game_types_query.h"
@@ -72,6 +70,15 @@
 #include <json.hpp>
 
 namespace loot {
+void sendProgressUpdate(CefRefPtr<CefFrame> frame, const std::string& message) {
+  auto logger = getLogger();
+  if (logger) {
+    logger->trace("Sending progress update: {}", message);
+  }
+  frame->ExecuteJavaScript(
+      "loot.showProgress('" + message + "');", frame->GetURL(), 0);
+}
+
 QueryHandler::QueryHandler(LootState& lootState) : lootState_(lootState) {}
 
 // Called due to cefQuery execution in binding.html.
@@ -87,13 +94,16 @@ bool QueryHandler::OnQuery(CefRefPtr<CefBrowser> browser,
     if (!query)
       return false;
 
-    CefPostTask(TID_FILE, base::Bind(&Query::execute, query, callback));
+    CefRefPtr<QueryExecutor> executor = new QueryExecutor(std::move(query));
+
+    CefPostTask(TID_FILE,
+                base::Bind(&QueryExecutor::execute, executor, callback));
   } catch (std::exception& e) {
-    auto logger = lootState_.getLogger();
+    auto logger = getLogger();
     if (logger) {
       logger->error("Failed to parse CEF query request \"{}\": {}",
-        request.ToString(),
-        e.what());
+                    request.ToString(),
+                    e.what());
     }
     callback->Failure(-1, e.what());
   }
@@ -101,70 +111,105 @@ bool QueryHandler::OnQuery(CefRefPtr<CefBrowser> browser,
   return true;
 }
 
-CefRefPtr<Query> QueryHandler::createQuery(CefRefPtr<CefBrowser> browser,
-                                           CefRefPtr<CefFrame> frame,
-                                           const std::string& requestString) {
+std::unique_ptr<Query> QueryHandler::createQuery(
+    CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame,
+    const std::string& requestString) {
   nlohmann::json json = nlohmann::json::parse(requestString);
 
   const std::string name = json.at("name");
 
-  if (name == "applySort")
-    return new ApplySortQuery(lootState_, json.at("pluginNames"));
-  else if (name == "cancelFind")
-    return new CancelFindQuery(browser);
-  else if (name == "cancelSort")
-    return new CancelSortQuery(lootState_);
-  else if (name == "changeGame")
-    return new ChangeGameQuery(lootState_, frame, json.at("gameFolder"));
-  else if (name == "clearAllMetadata")
-    return new ClearAllMetadataQuery(lootState_);
-  else if (name == "clearPluginMetadata")
-    return new ClearPluginMetadataQuery(lootState_, json.at("pluginName"));
-  else if (name == "closeSettings")
-    return new CloseSettingsQuery(lootState_, json.at("settings"));
-  else if (name == "copyContent")
-    return new CopyContentQuery(json.at("content"));
-  else if (name == "copyLoadOrder")
-    return new CopyLoadOrderQuery(lootState_, json.at("pluginNames"));
-  else if (name == "copyMetadata")
-    return new CopyMetadataQuery(lootState_, json.at("pluginName"));
-  else if (name == "discardUnappliedChanges")
-    return new DiscardUnappliedChangesQuery(lootState_);
-  else if (name == "editorClosed")
-    return new EditorClosedQuery(lootState_, json.at("editorState"));
-  else if (name == "editorOpened")
-    return new EditorOpenedQuery(lootState_);
-  else if (name == "getConflictingPlugins")
-    return new GetConflictingPluginsQuery(lootState_, json.at("pluginName"));
-  else if (name == "getGameTypes")
-    return new GetGameTypesQuery();
-  else if (name == "getGameData")
-    return new GetGameDataQuery(lootState_, frame);
-  else if (name == "getInitErrors")
-    return new GetInitErrorsQuery(lootState_);
-  else if (name == "getInstalledGames")
-    return new GetInstalledGamesQuery(lootState_);
-  else if (name == "getLanguages")
-    return new GetLanguagesQuery();
-  else if (name == "getSettings")
-    return new GetSettingsQuery(lootState_);
-  else if (name == "getVersion")
-    return new GetVersionQuery();
-  else if (name == "openLogLocation")
-    return new OpenLogLocationQuery();
-  else if (name == "openReadme")
-    return new OpenReadmeQuery(json.at("relativeFilePath").get<std::string>());
-  else if (name == "redatePlugins")
-    return new RedatePluginsQuery(lootState_);
-  else if (name == "saveUserGroups")
-    return new SaveUserGroupsQuery(lootState_, json.at("userGroups"));
-  else if (name == "saveFilterState")
-    return new SaveFilterStateQuery(
-        lootState_, json.at("filter").at("name"), json.at("filter").at("state"));
-  else if (name == "sortPlugins")
-    return new SortPluginsQuery(lootState_, frame);
-  else if (name == "updateMasterlist")
-    return new UpdateMasterlistQuery(lootState_);
+  if (name == "applySort") {
+    return std::make_unique<ApplySortQuery<>>(
+        lootState_.GetCurrentGame(), lootState_, json.at("pluginNames"));
+  } else if (name == "cancelSort") {
+    return std::make_unique<CancelSortQuery<>>(
+        lootState_.GetCurrentGame(), lootState_, lootState_.getLanguage());
+  } else if (name == "changeGame") {
+    return std::make_unique<ChangeGameQuery<>>(
+        lootState_,
+        lootState_.getLanguage(),
+        json.at("gameFolder"),
+        [frame](std::string message) { sendProgressUpdate(frame, message); });
+  } else if (name == "clearAllMetadata") {
+    return std::make_unique<ClearAllMetadataQuery<>>(lootState_.GetCurrentGame(),
+                                                   lootState_.getLanguage());
+  } else if (name == "clearPluginMetadata") {
+    return std::make_unique<ClearPluginMetadataQuery<>>(
+        lootState_.GetCurrentGame(),
+        lootState_.getLanguage(),
+        json.at("pluginName"));
+  } else if (name == "closeSettings") {
+    return std::make_unique<CloseSettingsQuery>(lootState_,
+                                                json.at("settings"));
+  } else if (name == "copyContent") {
+    return std::make_unique<CopyContentQuery>(json.at("content"));
+  } else if (name == "copyLoadOrder") {
+    return std::make_unique<CopyLoadOrderQuery<>>(lootState_.GetCurrentGame(),
+                                                json.at("pluginNames"));
+  } else if (name == "copyMetadata") {
+    return std::make_unique<CopyMetadataQuery<>>(lootState_.GetCurrentGame(),
+                                               lootState_.getLanguage(),
+                                               json.at("pluginName"));
+  } else if (name == "discardUnappliedChanges") {
+    return std::make_unique<DiscardUnappliedChangesQuery>(lootState_);
+  } else if (name == "editorClosed") {
+    return std::make_unique<EditorClosedQuery<>>(lootState_.GetCurrentGame(),
+                                               lootState_,
+                                               lootState_.getLanguage(),
+                                               json.at("editorState"));
+  } else if (name == "editorOpened") {
+    return std::make_unique<EditorOpenedQuery>(lootState_);
+  } else if (name == "getConflictingPlugins") {
+    return std::make_unique<GetConflictingPluginsQuery<>>(
+        lootState_.GetCurrentGame(),
+        lootState_.getLanguage(),
+        json.at("pluginName"));
+  } else if (name == "getGameTypes") {
+    return std::make_unique<GetGameTypesQuery>();
+  } else if (name == "getGameData") {
+    return std::make_unique<GetGameDataQuery<>>(
+        lootState_.GetCurrentGame(),
+        lootState_.getLanguage(),
+        [frame](std::string message) { sendProgressUpdate(frame, message); });
+  } else if (name == "getInitErrors") {
+    return std::make_unique<GetInitErrorsQuery>(lootState_);
+  } else if (name == "getInstalledGames") {
+    return std::make_unique<GetInstalledGamesQuery>(lootState_);
+  } else if (name == "getLanguages") {
+    return std::make_unique<GetLanguagesQuery>();
+  } else if (name == "getSettings") {
+    return std::make_unique<GetSettingsQuery>(lootState_);
+  } else if (name == "getVersion") {
+    return std::make_unique<GetVersionQuery>();
+  } else if (name == "openLogLocation") {
+    return std::make_unique<OpenLogLocationQuery>(lootState_.getLogPath());
+  } else if (name == "openReadme") {
+    return std::make_unique<OpenReadmeQuery>(
+        lootState_.getReadmePath(),
+        json.at("relativeFilePath").get<std::string>());
+  } else if (name == "redatePlugins") {
+    return std::make_unique<RedatePluginsQuery<>>(lootState_.GetCurrentGame());
+  } else if (name == "saveUserGroups") {
+    return std::make_unique<SaveUserGroupsQuery<>>(lootState_.GetCurrentGame(),
+                                                 json.at("userGroups"));
+  } else if (name == "saveFilterState") {
+    return std::make_unique<SaveFilterStateQuery>(
+        lootState_,
+        json.at("filter").at("name"),
+        json.at("filter").at("state"));
+  } else if (name == "sortPlugins") {
+    return std::make_unique<SortPluginsQuery<>>(
+        lootState_.GetCurrentGame(),
+        lootState_,
+        lootState_.getLanguage(),
+        [frame](std::string message) { sendProgressUpdate(frame, message); });
+  } else if (name == "updateMasterlist") {
+    return std::make_unique<UpdateMasterlistQuery<>>(lootState_.GetCurrentGame(),
+                                                   lootState_.getLanguage());
+  } else if (name == "getAutoSort") {
+    return std::make_unique<GetAutoSortQuery>(lootState_);
+  }
 
   return nullptr;
 }

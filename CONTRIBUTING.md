@@ -7,9 +7,11 @@ A general guide to contributing to LOOT may be found on [LOOT's website](https:/
 
 The repository branching structure is pretty simple:
 
-* The `master` branch holds released code.
-* The `dev` branch is a next-release branch. It holds code that's working towards the next big release but which isn't there yet. Code on `dev` is generally pretty stable as CI must pass before anything can be merged into it, but may not be release-ready.
-* Other branches are generally themed on specific features or groups of changes, and come and go as they are merged into one of the two above, or discarded.
+* The `master` branch holds code that's released or that will be in the next
+  release. Code on `master` is generally pretty stable as CI must pass before
+  anything can be merged into it.
+* Other branches are generally themed on specific features or groups of changes,
+  and come and go as they are merged into one of the two above, or discarded.
 
 ## Getting Involved
 
@@ -66,9 +68,22 @@ Some strings to be translated may contain special characters. Different types of
 
 If you're adding a new translation, LOOT's source code must be updated to recognise it. You can do this yourself and include the changes in your translation's pull request if you wish. The files and functions which must be updated are given below.
 
-* In [get_languages_query.h](src/gui/cef/query/get_languages_query.h), add the language's ISO code and name to the map returned by `getLanguages()`.
+* In [get_languages_query.h](src/gui/cef/query/types/get_languages_query.h), add the language's ISO code and name to the map returned by `getLanguages()`.
 * In [archive.js](scripts/archive.js), add the language folder to the list returned by `getLanguageFolders()`.
-* In [installer.iss](scripts/installer.iss), add an entry for your language's translation file to the `[Files]` section.
+* In [installer.iss](scripts/installer.iss):
+  - If the Inno Download Plugin provides a translation file for your language,
+    add it to the block of `#include <idplang\...` lines at the top of the file.
+    If you have Inno Download Plugin installed, you can see what files it
+    provides at `C:\Program Files (x86)\Inno Download Plugin\unicode\idplang\`.
+
+    Note that the translation file must use the correct ISO code internally,
+    otherwise it can't be used: the Brazilian Portuguese, Czech and Simplified
+    Chinese translations are not used for this reason.
+  - Add a line for your language in the `[Languages]` section. If you have Inno
+    Setup installed, the available translation files are at
+    `C:\Program Files (x86)\Inno Setup 5\Languages\`.
+  - Add an entry for your language's translation file to the `[Files]` section.
+  - Add a translation for your language to the `[CustomMessages]` section.
 
 ## Code Style
 

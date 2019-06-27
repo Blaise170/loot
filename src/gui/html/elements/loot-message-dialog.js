@@ -1,12 +1,13 @@
-// import {PolymerElement} from '@polymer/polymer/polymer-element.js';
-// import {PaperButton} from 'paper-button/paper-button.js">
-// import {PaperDialog} from 'paper-dialog/paper-dialog.js">
-// import {WebAnimations} from 'neon-animation/web-animations.js">
-// import {FadeInAnimation} from 'neon-animation/animations/fade-in-animation.js">
-// import {FadeOutAnimation} from 'neon-animation/animations/fade-out-animation.js">
+import { PolymerElement, html } from '@polymer/polymer';
+import { flush } from '@polymer/polymer/lib/utils/flush.js';
+import '@polymer/paper-button/paper-button.js';
+import '@polymer/paper-dialog/paper-dialog.js';
+import '@polymer/neon-animation/animations/fade-in-animation.js';
+import '@polymer/neon-animation/animations/fade-out-animation.js';
+import 'web-animations-js/web-animations-next.min.js';
 // Also depends on the loot.l10n global.
 
-export default class LootMessageDialog extends Polymer.Element {
+export default class LootMessageDialog extends PolymerElement {
   static get is() {
     return 'loot-message-dialog';
   }
@@ -18,7 +19,7 @@ export default class LootMessageDialog extends Polymer.Element {
   }
 
   static get template() {
-    return Polymer.html`
+    return html`
       <style>
         paper-dialog {
           margin: 24px 40px;
@@ -28,16 +29,26 @@ export default class LootMessageDialog extends Polymer.Element {
           display: none;
         }
       </style>
-      <paper-dialog id="dialog"
-                    entry-animation="fade-in-animation"
-                    exit-animation="fade-out-animation"
-                    modal>
-        <slot></slot>
+      <paper-dialog
+        id="dialog"
+        entry-animation="fade-in-animation"
+        exit-animation="fade-out-animation"
+        modal
+      >
+        <slot name="heading"></slot>
+        <paper-dialog-scrollable>
+          <slot name="message"></slot>
+        </paper-dialog-scrollable>
         <div class="buttons">
-          <paper-button id="dismiss" dialog-dismiss>[[_localise('Cancel')]]</paper-button>
-          <paper-button id="confirm" dialog-confirm autofocus>[[_localise('OK')]]</paper-button>
+          <paper-button id="dismiss" dialog-dismiss
+            >[[_localise('Cancel')]]</paper-button
+          >
+          <paper-button id="confirm" dialog-confirm autofocus
+            >[[_localise('OK')]]</paper-button
+          >
         </div>
-      </paper-dialog>`;
+      </paper-dialog>
+    `;
   }
 
   /* eslint-disable class-methods-use-this */
@@ -67,13 +78,13 @@ export default class LootMessageDialog extends Polymer.Element {
 
   showModal(title, text, closeCallback) {
     this.getElementsByClassName('heading')[0].textContent = title;
-    this.getElementsByClassName('message')[0].textContent = text;
+    this.getElementsByClassName('message')[0].innerHTML = text;
 
     this.closeCallback = closeCallback;
 
     // This is necessary to prevent the dialog position changing when it is
     // displayed.
-    Polymer.dom.flush(); // eslint-disable-line new-cap, no-undef
+    flush();
 
     this.$.dialog.open();
   }
@@ -88,10 +99,12 @@ export default class LootMessageDialog extends Polymer.Element {
     if (this.children.length === 0) {
       const h2 = document.createElement('h2');
       h2.className = 'heading';
+      h2.slot = 'heading';
       this.appendChild(h2);
 
       const p = document.createElement('p');
       p.className = 'message';
+      p.slot = 'message';
       this.appendChild(p);
     }
 

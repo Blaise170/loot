@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -281,12 +281,14 @@ void to_json(nlohmann::json& json, const GameSettings& game) {
     { "folder", game.FolderName() },
     { "repo", game.RepoURL() },
     { "branch", game.RepoBranch() },
-    { "path", game.GamePath().string() },
-    { "localPath", game.GameLocalPath().string() },
+    { "path", game.GamePath().u8string() },
+    { "localPath", game.GameLocalPath().u8string() },
   };
 }
 
 void from_json(const nlohmann::json& json, GameSettings& game) {
+  using std::filesystem::u8path;
+
   auto gameType = mapGameType(json.at("type"));
   game = GameSettings(gameType, json.at("folder"));
 
@@ -295,16 +297,15 @@ void from_json(const nlohmann::json& json, GameSettings& game) {
   game.SetRegistryKey(json.value("registry", ""));
   game.SetRepoURL(json.value("repo", ""));
   game.SetRepoBranch(json.value("branch", ""));
-  game.SetGamePath(json.value("path", ""));
-  game.SetGameLocalPath(json.value("localPath", ""));
+  game.SetGamePath(u8path(json.value("path", "")));
+  game.SetGameLocalPath(u8path(json.value("localPath", "")));
 }
 
 nlohmann::json to_json_with_language(const PluginMetadata& metadata,
                                      const std::string& language) {
-  return {
+  nlohmann::json json = {
     { "name", metadata.GetName() },
     { "enabled", metadata.IsEnabled() },
-    { "group", metadata.GetGroup() },
     { "after", metadata.GetLoadAfterFiles() },
     { "req", metadata.GetRequirements() },
     { "inc", metadata.GetIncompatibilities() },
@@ -314,6 +315,12 @@ nlohmann::json to_json_with_language(const PluginMetadata& metadata,
     { "clean", metadata.GetCleanInfo() },
     { "url", metadata.GetLocations() }
   };
+
+  if (metadata.GetGroup().has_value()) {
+    json["group"] = metadata.GetGroup().value();
+  }
+
+  return json;
 }
 
 void from_json(const nlohmann::json& json, PluginMetadata& metadata) {
@@ -350,11 +357,9 @@ void from_json(const nlohmann::json& json, PluginMetadata& metadata) {
 
   metadata.SetEnabled(json.value("enabled", false));
 
-  // This will register the group as explicit, but that's OK because
-  // explicitness is ignored when this deserialised data is used.
-  auto group = json.value("group", "default");
-  if (group != Group().GetName()) {
-    metadata.SetGroup(json.value("group", "default"));
+  auto groupIt = json.find("group");
+  if (groupIt != json.end()) {
+    metadata.SetGroup(groupIt->get<std::string>());
   }
 
   metadata.SetLoadAfterFiles(json.value("after", std::set<File>()));
@@ -367,34 +372,47 @@ void from_json(const nlohmann::json& json, PluginMetadata& metadata) {
   metadata.SetLocations(json.value("url", std::set<Location>()));
 }
 
-void to_json(nlohmann::json& json, const DerivedPluginMetadata& plugin) {
+template<typename G>
+void to_json(nlohmann::json& json, const DerivedPluginMetadata<G>& plugin) {
   json = {
     { "name", plugin.name },
-    { "version", plugin.version },
     { "isActive", plugin.isActive },
     { "isDirty", plugin.isDirty },
     { "isEmpty", plugin.isEmpty },
     { "isMaster", plugin.isMaster },
     { "isLightMaster", plugin.isLightMaster },
     { "loadsArchive", plugin.loadsArchive },
-    { "crc", plugin.crc },
-    { "loadOrderIndex", plugin.loadOrderIndex },
-    { "group", plugin.group },
     { "messages", plugin.messages },
     { "suggestedTags", plugin.suggestedTags },
     { "currentTags", plugin.currentTags },
   };
 
+  if (plugin.version.has_value()) {
+    json["version"] = plugin.version.value();
+  }
+
+  if (plugin.crc.has_value()) {
+    json["crc"] = plugin.crc.value();
+  }
+
+  if (plugin.group.has_value()) {
+    json["group"] = plugin.group.value();
+  }
+
+  if (plugin.loadOrderIndex.has_value()) {
+    json["loadOrderIndex"] = plugin.loadOrderIndex.value();
+  }
+
   if (!plugin.cleanedWith.empty()) {
     json["cleanedWith"] = plugin.cleanedWith;
   }
 
-  if (!plugin.masterlistMetadata.HasNameOnly()) {
-    json["masterlist"] = to_json_with_language(plugin.masterlistMetadata, plugin.language);
+  if (plugin.masterlistMetadata.has_value()) {
+    json["masterlist"] = to_json_with_language(plugin.masterlistMetadata.value(), plugin.language);
   }
 
-  if (!plugin.userMetadata.HasNameOnly()) {
-    json["userlist"] = to_json_with_language(plugin.userMetadata, plugin.language);
+  if (plugin.userMetadata.has_value()) {
+    json["userlist"] = to_json_with_language(plugin.userMetadata.value(), plugin.language);
   }
 }
 }

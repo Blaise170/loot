@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -26,20 +26,22 @@ along with LOOT.  If not, see
 #define LOOT_GUI_QUERY_REDATE_PLUGINS_QUERY
 
 #include "gui/cef/query/query.h"
-#include "gui/state/loot_state.h"
+#include "gui/state/game/game.h"
 
 namespace loot {
+template<typename G = gui::Game>
 class RedatePluginsQuery : public Query {
 public:
-  RedatePluginsQuery(LootState& state) : state_(state) {}
+  RedatePluginsQuery(G& game) :
+      game_(game) {}
 
   std::string executeLogic() {
-    state_.getCurrentGame().RedatePlugins();
+    game_.RedatePlugins();
     return "";
   }
 
 private:
-  LootState& state_;
+  G& game_;
 };
 }
 

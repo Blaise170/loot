@@ -3,7 +3,7 @@
 A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
 Fallout: New Vegas.
 
-Copyright (C) 2014-2018    WrinklyNinja
+Copyright (C) 2014 WrinklyNinja
 
 This file is part of LOOT.
 
@@ -28,24 +28,31 @@ along with LOOT.  If not, see
 #include "gui/cef/query/types/get_game_data_query.h"
 
 namespace loot {
-class ChangeGameQuery : public GetGameDataQuery {
+template<typename G = gui::Game>
+class ChangeGameQuery : public Query {
 public:
-  ChangeGameQuery(LootState& state,
-                  CefRefPtr<CefFrame> frame,
-                  const std::string& gameFolder) :
-      GetGameDataQuery(state, frame),
-      state_(state),
-      gameFolder_(gameFolder) {}
+  ChangeGameQuery(GamesManager& gamesManager,
+                  std::string language,
+                  std::string gameFolder,
+                  std::function<void(std::string)> sendProgressUpdate) :
+      gamesManager_(gamesManager),
+      gameFolder_(gameFolder),
+      language_(language),
+      sendProgressUpdate_(sendProgressUpdate) {}
 
   std::string executeLogic() {
-    state_.changeGame(gameFolder_);
+    gamesManager_.SetCurrentGame(gameFolder_);
 
-    return GetGameDataQuery::executeLogic();
+    GetGameDataQuery<G> subQuery(gamesManager_.GetCurrentGame(), language_, sendProgressUpdate_);
+
+    return subQuery.executeLogic();
   }
 
 private:
-  LootState& state_;
+  GamesManager& gamesManager_;
   const std::string gameFolder_;
+  const std::string language_;
+  const std::function<void(std::string)> sendProgressUpdate_;
 };
 }
 
