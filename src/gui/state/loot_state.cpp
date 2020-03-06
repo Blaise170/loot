@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2014 WrinklyNinja
 
@@ -26,6 +27,19 @@
 
 #include <unordered_set>
 
+#ifdef _WIN32
+#ifndef UNICODE
+#define UNICODE
+#endif
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include <spdlog/sinks/basic_file_sink.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
@@ -37,10 +51,6 @@
 #include "gui/state/loot_paths.h"
 #include "gui/version.h"
 #include "loot/api.h"
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 using boost::format;
 using boost::locale::translate;
@@ -85,8 +95,9 @@ void apiLogCallback(LogLevel level, const char* message) {
   }
 }
 
-LootState::LootState(const std::string& lootDataPath) :
-    LootPaths(lootDataPath) {}
+LootState::LootState(const std::filesystem::path& lootAppPath,
+                     const std::filesystem::path& lootDataPath) :
+    LootPaths(lootAppPath, lootDataPath) {}
 
 void LootState::init(const std::string& cmdLineGame, bool autoSort) {
   if (autoSort && cmdLineGame.empty()) {
@@ -105,7 +116,6 @@ void LootState::init(const std::string& cmdLineGame, bool autoSort) {
 
   // Boost.Locale initialisation: Generate and imbue locales.
   locale::global(gen("en.UTF-8"));
-  loot::InitialiseLocale("en.UTF-8");
 
   // Check if the LOOT local app data folder exists, and create it if not.
   if (!fs::exists(LootPaths::getLootDataPath())) {
@@ -163,7 +173,6 @@ void LootState::init(const std::string& cmdLineGame, bool autoSort) {
 
     // Boost.Locale initialisation: Generate and imbue locales.
     locale::global(gen(getLanguage() + ".UTF-8"));
-    loot::InitialiseLocale(getLanguage() + ".UTF-8");
   }
 
   // Detect games & select startup game

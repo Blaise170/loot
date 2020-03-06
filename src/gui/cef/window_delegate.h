@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2014 WrinklyNinja
 
@@ -24,7 +25,6 @@
 
 #ifndef LOOT_GUI_WINDOW_DELEGATE
 #define LOOT_GUI_WINDOW_DELEGATE
-#define NOMINMAX
 
 #include <include/views/cef_browser_view.h>
 #include <include/views/cef_window.h>

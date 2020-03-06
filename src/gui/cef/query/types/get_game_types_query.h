@@ -1,7 +1,8 @@
 /*  LOOT
 
-A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-Fallout: New Vegas.
+A load order optimisation tool for
+Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
 Copyright (C) 2014 WrinklyNinja
 
@@ -48,6 +49,7 @@ private:
     nlohmann::json json;
 
     json["gameTypes"] = {
+      GameSettings(GameType::tes3).FolderName(),
       GameSettings(GameType::tes4).FolderName(),
       GameSettings(GameType::tes5).FolderName(),
       GameSettings(GameType::tes5se).FolderName(),

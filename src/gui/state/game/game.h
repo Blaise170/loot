@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2012 WrinklyNinja
 
@@ -25,15 +26,11 @@
 #ifndef LOOT_GUI_STATE_GAME_GAME
 #define LOOT_GUI_STATE_GAME_GAME
 
-#define FMT_NO_FMT_STRING_ALIAS
-
 #include <filesystem>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_set>
-
-#include <spdlog/spdlog.h>
 
 #include "gui/state/game/game_settings.h"
 #include "loot/api.h"
@@ -66,7 +63,6 @@ public:
   bool ArePluginsFullyLoaded()
       const;  // Checks if the game's plugins have already been loaded.
 
-  std::filesystem::path DataPath() const;
   std::filesystem::path MasterlistPath() const;
   std::filesystem::path UserlistPath() const;
   std::filesystem::path PluginsTxtPath() const;

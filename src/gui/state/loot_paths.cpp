@@ -1,7 +1,8 @@
 /*  LOOT
 
-A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2012 WrinklyNinja
 
@@ -26,12 +27,6 @@ Fallout: New Vegas.
 
 #include <locale>
 
-#include <boost/locale.hpp>
-
-#include "gui/helpers.h"
-#include "gui/state/logging.h"
-#include "loot/api.h"
-
 #ifdef _WIN32
 #ifndef UNICODE
 #define UNICODE
@@ -39,9 +34,18 @@ Fallout: New Vegas.
 #ifndef _UNICODE
 #define _UNICODE
 #endif
-#include "shlobj.h"
-#include "windows.h"
+#ifndef NOMINMAX
+#define NOMINMAX
 #endif
+#include <shlobj.h>
+#include <windows.h>
+#endif
+
+#include <boost/locale.hpp>
+
+#include "gui/helpers.h"
+#include "gui/state/logging.h"
+#include "loot/api.h"
 
 namespace loot {
 std::filesystem::path getExecutableDirectory() {
@@ -56,8 +60,8 @@ std::filesystem::path getExecutableDirectory() {
       logger->error("Failed to get LOOT executable path.");
     }
     throw std::system_error(GetLastError(),
-      std::system_category(),
-      "Failed to get LOOT executable path.");
+                            std::system_category(),
+                            "Failed to get LOOT executable path.");
   }
 
   return std::filesystem::path(executablePathString).parent_path();
@@ -70,21 +74,24 @@ std::filesystem::path getExecutableDirectory() {
     if (logger) {
       logger->error("Failed to get LOOT executable path.");
     }
-    throw std::system_error(count,
-      std::system_category(),
-      "Failed to get LOOT executable path.");
+    throw std::system_error(
+        count, std::system_category(), "Failed to get LOOT executable path.");
   }
 
   return std::filesystem::u8path(std::string(result, count)).parent_path();
 #endif
 }
 
-LootPaths::LootPaths(const std::string& lootDataPath) {
+LootPaths::LootPaths(const std::filesystem::path& lootAppPath,
+                     const std::filesystem::path& lootDataPath) {
   // Set the locale to get UTF-8 conversions working correctly.
   std::locale::global(boost::locale::generator().generate(""));
-  loot::InitialiseLocale("");
 
-  lootAppPath_ = getExecutableDirectory();
+  if (lootAppPath.empty()) {
+    lootAppPath_ = getExecutableDirectory();
+  } else {
+    lootAppPath_ = lootAppPath;
+  }
 
   if (!lootDataPath.empty())
     lootDataPath_ = lootDataPath;
@@ -104,7 +111,9 @@ std::filesystem::path LootPaths::getL10nPath() const {
   return getResourcesPath() / "l10n";
 }
 
-std::filesystem::path LootPaths::getLootDataPath() const { return lootDataPath_; }
+std::filesystem::path LootPaths::getLootDataPath() const {
+  return lootDataPath_;
+}
 
 std::filesystem::path LootPaths::getSettingsPath() const {
   return lootDataPath_ / "settings.toml";

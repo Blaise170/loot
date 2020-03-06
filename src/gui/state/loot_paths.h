@@ -1,7 +1,8 @@
 /*  LOOT
 
-A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-Fallout: New Vegas.
+A load order optimisation tool for
+Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
 Copyright (C) 2014 WrinklyNinja
 
@@ -30,9 +31,8 @@ along with LOOT.  If not, see
 namespace loot {
 class LootPaths {
 public:
-  // Sets the app path to the current path, and the data path to the given
-  // path or (if it is an empty string), local app data path / "LOOT".
-  LootPaths(const std::string& lootDataPath);
+  LootPaths(const std::filesystem::path& lootAppPath, 
+            const std::filesystem::path& lootDataPath);
 
   std::filesystem::path getReadmePath() const;
   std::filesystem::path getResourcesPath() const;

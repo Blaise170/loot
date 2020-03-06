@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2014 WrinklyNinja
 
@@ -31,12 +32,16 @@
 #ifndef _UNICODE
 #define _UNICODE
 #endif
-#include "shlobj.h"
-#include "shlwapi.h"
-#include "windows.h"
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <shlobj.h>
+#include <shlwapi.h>
+#include <windows.h>
 #else
 #include <unicode/uchar.h>
 #include <unicode/unistr.h>
+using icu::UnicodeString;
 #endif
 
 #include "gui/state/logging.h"

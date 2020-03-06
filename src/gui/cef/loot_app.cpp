@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2014 WrinklyNinja
 
@@ -40,8 +41,7 @@ CommandLineOptions::CommandLineOptions() : CommandLineOptions(0, nullptr) {}
 #endif
 
 CommandLineOptions::CommandLineOptions(int argc, const char* const* argv) :
-    autoSort(false),
-    url("http://loot/ui/index.html") {
+    autoSort(false) {
   // Record command line arguments.
   CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
 
@@ -64,21 +64,11 @@ CommandLineOptions::CommandLineOptions(int argc, const char* const* argv) :
   }
 
   autoSort = command_line->HasSwitch("auto-sort");
-
-  if (command_line->HasArguments()) {
-    std::vector<CefString> arguments;
-    command_line->GetArguments(arguments);
-    url = arguments[0];
-    auto logger = getLogger();
-    if (logger) {
-      logger->info("Loading homepage using URL: {}", url);
-    }
-  }
 }
 
 LootApp::LootApp(CommandLineOptions options) :
   commandLineOptions_(options),
-    lootState_(options.lootDataPath) {}
+    lootState_("", options.lootDataPath) {}
 
 std::filesystem::path LootApp::getL10nPath() const {
   return lootState_.getL10nPath();
@@ -120,11 +110,16 @@ void LootApp::OnContextInitialized() {
       "loot",
       new LootSchemeHandlerFactory(lootState_.getResourcesPath()));
 
+  CefRegisterSchemeHandlerFactory(
+      "http",
+      "data.loot",
+      new LootSchemeHandlerFactory(lootState_.getLootDataPath()));
+
   // Specify CEF browser settings here.
   CefBrowserSettings browser_settings;
 
   CefRefPtr<CefBrowserView> browser_view = CefBrowserView::CreateBrowserView(
-      handler, commandLineOptions_.url, browser_settings, NULL, NULL);
+      handler, "http://loot/ui/index.html", browser_settings, NULL, NULL, NULL);
 
   CefWindow::CreateTopLevelWindow(
       new WindowDelegate(browser_view, lootState_.getWindowPosition()));
@@ -137,11 +132,12 @@ void LootApp::OnWebKitInitialized() {
 }
 
 bool LootApp::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
+                                       CefRefPtr<CefFrame> frame,
                                        CefProcessId source_process,
                                        CefRefPtr<CefProcessMessage> message) {
   // Handle IPC messages from the browser process...
   return message_router_->OnProcessMessageReceived(
-      browser, source_process, message);
+      browser, frame, source_process, message);
 }
 
 void LootApp::OnContextCreated(CefRefPtr<CefBrowser> browser,

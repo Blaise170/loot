@@ -11,7 +11,7 @@
 #include <idplang\spanish.iss>
 
 #define MyAppName "LOOT"
-#define MyAppVersion "0.14.4"
+#define MyAppVersion "0.15.1"
 #define MyAppPublisher "LOOT Team"
 #define MyAppURL "https://loot.github.io"
 #define MyAppExeName "LOOT.exe"
@@ -158,18 +158,21 @@ Root: HKLM; Subkey: "Software\LOOT"; ValueType: string; ValueName: "Installed Pa
 [UninstallDelete]
 Type: files; Name: "{localappdata}\{#MyAppName}\";
 
+Type: files; Name: "{localappdata}\{#MyAppName}\Morrowind\masterlist.yaml";
 Type: files; Name: "{localappdata}\{#MyAppName}\Oblivion\masterlist.yaml";
 Type: files; Name: "{localappdata}\{#MyAppName}\Skyrim\masterlist.yaml";
 Type: files; Name: "{localappdata}\{#MyAppName}\Fallout3\masterlist.yaml";
 Type: files; Name: "{localappdata}\{#MyAppName}\FalloutNV\masterlist.yaml";
 Type: files; Name: "{localappdata}\{#MyAppName}\Fallout4\masterlist.yaml";
 
+Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\Morrowind\.git";
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\Oblivion\.git";
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\Skyrim\.git";
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\Fallout3\.git";
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\FalloutNV\.git";
 Type: filesandordirs; Name: "{localappdata}\{#MyAppName}\Fallout4\.git";
 
+Type: dirifempty; Name: "{localappdata}\{#MyAppName}\Morrowind";
 Type: dirifempty; Name: "{localappdata}\{#MyAppName}\Oblivion";
 Type: dirifempty; Name: "{localappdata}\{#MyAppName}\Skyrim";
 Type: dirifempty; Name: "{localappdata}\{#MyAppName}\Fallout3";
@@ -280,6 +283,7 @@ begin
     then begin
       DeleteFile(ExpandConstant('{localappdata}\{#MyAppName}\LOOTDebugLog.txt'));
       DeleteFile(ExpandConstant('{localappdata}\{#MyAppName}\settings.toml'));
+      DeleteFile(ExpandConstant('{localappdata}\{#MyAppName}\Morrowind\userlist.yaml'));
       DeleteFile(ExpandConstant('{localappdata}\{#MyAppName}\Oblivion\userlist.yaml'));
       DeleteFile(ExpandConstant('{localappdata}\{#MyAppName}\Skyrim\userlist.yaml'));
       DeleteFile(ExpandConstant('{localappdata}\{#MyAppName}\Fallout3\userlist.yaml'));

@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2014 WrinklyNinja
 
@@ -41,7 +42,6 @@ struct CommandLineOptions {
   bool autoSort;
   std::string defaultGame;
   std::string lootDataPath;
-  std::string url;
 };
 
 class LootApp : public CefApp,
@@ -67,6 +67,7 @@ public:
   // Override CefRenderProcessHandler methods.
   virtual bool OnProcessMessageReceived(
       CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame> frame,
       CefProcessId source_process,
       CefRefPtr<CefProcessMessage> message) OVERRIDE;
 

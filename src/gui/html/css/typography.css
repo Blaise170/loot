@@ -145,13 +145,17 @@
 }
 
 /* Typography */
+:root {
+    --loot-font-family: Roboto, Noto, sans-serif;
+}
 html {
-    /* Microsoft Yahei is for Chinese characters, Malgun Gothic for Korean, and Meiryo for Japanese
-       characters. If Noto isn't present, they're better than the sans-serif
-       defaults. */
-    font:13px/1.429 Roboto, Noto, 'Microsoft Yahei', 'Malgun Gothic', 'Meiryo', sans-serif;
     color: var(--primary-text-color);
+    /* Languages can also define their own font family to use instead of these
+       in LOOT's settings. */
+    font-family: var(--loot-font-family);
+    font-size: 13px;
     font-weight: 400;
+    line-height: 1.429;
     text-rendering: optimizeLegibility;
 }
 h1 {

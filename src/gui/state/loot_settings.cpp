@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2014 WrinklyNinja
 
@@ -64,7 +65,9 @@ GameSettings convert(const std::shared_ptr<cpptoml::table>& table,
     }
   }
 
-  if (*type == GameSettings(GameType::tes4).FolderName()) {
+  if (*type == GameSettings(GameType::tes3).FolderName()) {
+    game = GameSettings(GameType::tes3, *folder);
+  } else if (*type == GameSettings(GameType::tes4).FolderName()) {
     game = GameSettings(GameType::tes4, *folder);
   } else if (*type == GameSettings(GameType::tes5).FolderName()) {
     game = GameSettings(GameType::tes5, *folder);
@@ -133,6 +136,29 @@ GameSettings convert(const std::shared_ptr<cpptoml::table>& table,
   return game;
 }
 
+LootSettings::Language convert(const std::shared_ptr<cpptoml::table>& table) {
+  auto locale = table->get_as<std::string>("locale");
+  if (!locale) {
+    throw std::runtime_error("'locale' key missing from language table");
+  }
+
+  auto name = table->get_as<std::string>("name");
+  if (!name) {
+    throw std::runtime_error("'name' key missing from language table");
+  }
+
+  LootSettings::Language language;
+  language.locale = *locale;
+  language.name = *name;
+
+  auto fontFamily = table->get_as<std::string>("fontFamily");
+  if (fontFamily) {
+    language.fontFamily = *fontFamily;
+  }
+
+  return language;
+}
+
 LootSettings::WindowPosition::WindowPosition() :
     top(0),
     bottom(0),
@@ -142,6 +168,7 @@ LootSettings::WindowPosition::WindowPosition() :
 
 LootSettings::LootSettings() :
     gameSettings_({
+        GameSettings(GameType::tes3),
         GameSettings(GameType::tes4),
         GameSettings(GameType::tes5),
         GameSettings(GameType::tes5se),
@@ -157,12 +184,29 @@ LootSettings::LootSettings() :
                             "stall\\Nehrim - At Fate's "
                             "Edge_is1\\InstallLocation"),
     }),
+    languages_({
+        Language({"cs", "Čeština", std::nullopt}),
+        Language({"da", "Dansk", std::nullopt}),
+        Language({"de", "Deutsch", std::nullopt}),
+        Language({"en", "English", std::nullopt}),
+        Language({"es", "Español", std::nullopt}),
+        Language({"fi", "suomi", std::nullopt}),
+        Language({"fr", "Français", std::nullopt}),
+        Language({"ko", "한국어", "Malgun Gothic"}),
+        Language({"pl", "Polski", std::nullopt}),
+        Language({"pt_BR", "Português do Brasil", std::nullopt}),
+        Language({"ru", "Русский", std::nullopt}),
+        Language({"sv", "Svenska", std::nullopt}),
+        Language({"zh_CN", "简体中文", "Microsoft Yahei"}),
+        Language({"ja", "日本語", "Meiryo"}),
+      }),
     autoSort_(false),
     enableDebugLogging_(false),
     updateMasterlist_(true),
     enableLootUpdateCheck_(true),
     game_("auto"),
     language_("en"),
+    theme_("default"),
     lastGame_("auto") {}
 
 void LootSettings::load(const std::filesystem::path& file,
@@ -186,6 +230,7 @@ void LootSettings::load(const std::filesystem::path& file,
                                .value_or(enableLootUpdateCheck_);
   game_ = settings->get_as<std::string>("game").value_or(game_);
   language_ = settings->get_as<std::string>("language").value_or(language_);
+  theme_ = settings->get_as<std::string>("theme").value_or(theme_);
   lastGame_ = settings->get_as<std::string>("lastGame").value_or(lastGame_);
   lastVersion_ =
       settings->get_as<std::string>("lastVersion").value_or(lastVersion_);
@@ -231,6 +276,14 @@ void LootSettings::load(const std::filesystem::path& file,
       }
     }
   }
+
+  auto languages = settings->get_table_array("languages");
+  if (languages) {
+    languages_.clear();
+    for (const auto& language : *languages) {
+      languages_.push_back(convert(language));
+    }
+  }
 }
 
 void LootSettings::save(const std::filesystem::path& file) {
@@ -243,6 +296,7 @@ void LootSettings::save(const std::filesystem::path& file) {
   root->insert("enableLootUpdateCheck", enableLootUpdateCheck_);
   root->insert("game", game_);
   root->insert("language", language_);
+  root->insert("theme", theme_);
   root->insert("lastGame", lastGame_);
   root->insert("lastVersion", lastVersion_);
 
@@ -284,6 +338,21 @@ void LootSettings::save(const std::filesystem::path& file) {
       filters->insert(filter.first, filter.second);
     }
     root->insert("filters", filters);
+  }
+
+  if (!languages_.empty()) {
+    auto languageTables = cpptoml::make_table_array();
+
+    for (const auto& language : languages_) {
+      auto languageTable = cpptoml::make_table();
+      languageTable->insert("locale", language.locale);
+      languageTable->insert("name", language.name);
+      if (language.fontFamily.has_value()) {
+        languageTable->insert("fontFamily", language.fontFamily.value());
+      }
+      languageTables->push_back(languageTable);
+    }
+    root->insert("languages", languageTables);
   }
 
   std::ofstream out(file);
@@ -338,6 +407,12 @@ std::string LootSettings::getLanguage() const {
   return language_;
 }
 
+std::string LootSettings::getTheme() const {
+  lock_guard<recursive_mutex> guard(mutex_);
+
+  return theme_;
+}
+
 std::optional<LootSettings::WindowPosition> LootSettings::getWindowPosition()
     const {
   lock_guard<recursive_mutex> guard(mutex_);
@@ -357,6 +432,12 @@ const std::map<std::string, bool>& LootSettings::getFilters() const {
   return filters_;
 }
 
+const std::vector<LootSettings::Language>& LootSettings::getLanguages() const {
+  lock_guard<recursive_mutex> guard(mutex_);
+
+  return languages_;
+}
+
 void LootSettings::setDefaultGame(const std::string& game) {
   lock_guard<recursive_mutex> guard(mutex_);
 
@@ -367,6 +448,12 @@ void LootSettings::setLanguage(const std::string& language) {
   lock_guard<recursive_mutex> guard(mutex_);
 
   language_ = language;
+}
+
+void LootSettings::setTheme(const std::string& theme) {
+  lock_guard<recursive_mutex> guard(mutex_);
+
+  theme_ = theme;
 }
 
 void LootSettings::setAutoSort(bool autoSort) {
@@ -426,6 +513,11 @@ void LootSettings::updateLastVersion() {
 }
 
 void LootSettings::appendBaseGames() {
+  if (find(begin(gameSettings_),
+           end(gameSettings_),
+           GameSettings(GameType::tes3)) == end(gameSettings_))
+    gameSettings_.push_back(GameSettings(GameType::tes3));
+
   if (find(begin(gameSettings_),
            end(gameSettings_),
            GameSettings(GameType::tes4)) == end(gameSettings_))

@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2014 WrinklyNinja
 
@@ -47,6 +48,12 @@ public:
     bool maximised;
   };
 
+  struct Language {
+    std::string locale;
+    std::string name;
+    std::optional<std::string> fontFamily;
+  };
+
   LootSettings();
 
   void load(const std::filesystem::path& file,
@@ -61,12 +68,15 @@ public:
   std::string getLastGame() const;
   std::string getLastVersion() const;
   std::string getLanguage() const;
+  std::string getTheme() const;
   std::optional<WindowPosition> getWindowPosition() const;
   const std::vector<GameSettings>& getGameSettings() const;
   const std::map<std::string, bool>& getFilters() const;
+  const std::vector<Language>& getLanguages() const;
 
   void setDefaultGame(const std::string& game);
   void setLanguage(const std::string& language);
+  void setTheme(const std::string& theme);
   void setAutoSort(bool autSort);
   void enableDebugLogging(bool enable);
   void updateMasterlist(bool update);
@@ -87,9 +97,11 @@ private:
   std::string lastGame_;
   std::string lastVersion_;
   std::string language_;
+  std::string theme_;
   std::optional<WindowPosition> windowPosition_;
   std::vector<GameSettings> gameSettings_;
   std::map<std::string, bool> filters_;
+  std::vector<Language> languages_;
 
   mutable std::recursive_mutex mutex_;
 

@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2012 WrinklyNinja
 
@@ -54,6 +55,7 @@ public:
   std::string RepoBranch() const;
   std::filesystem::path GamePath() const;
   std::filesystem::path GameLocalPath() const;
+  std::filesystem::path DataPath() const;
 
   GameSettings& SetName(const std::string& name);
   GameSettings& SetMaster(const std::string& masterFile);
@@ -76,6 +78,7 @@ private:
 
   std::string registryKey_;
 
+  std::string pluginsFolderName_;
   std::string lootFolderName_;
 
   std::string repositoryURL_;

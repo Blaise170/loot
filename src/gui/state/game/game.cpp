@@ -1,7 +1,8 @@
 /*  LOOT
 
-    A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-    Fallout: New Vegas.
+    A load order optimisation tool for
+    Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+    Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
     Copyright (C) 2012 WrinklyNinja
 
@@ -29,6 +30,21 @@
 #include <fstream>
 #include <thread>
 
+#ifdef _WIN32
+#ifndef UNICODE
+#define UNICODE
+#endif
+#ifndef _UNICODE
+#define _UNICODE
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <shlobj.h>
+#include <shlwapi.h>
+#include <windows.h>
+#endif
+
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 #include <boost/locale.hpp>
@@ -39,19 +55,6 @@
 #include "gui/state/logging.h"
 #include "loot/exception/file_access_error.h"
 #include "loot/exception/undefined_group_error.h"
-
-#ifdef _WIN32
-#ifndef UNICODE
-#define UNICODE
-#endif
-#ifndef _UNICODE
-#define _UNICODE
-#endif
-#define NOMINMAX
-#include "shlobj.h"
-#include "shlwapi.h"
-#include "windows.h"
-#endif
 
 using std::list;
 using std::lock_guard;
@@ -389,12 +392,6 @@ void Game::LoadAllInstalledPlugins(bool headersOnly) {
 
 bool Game::ArePluginsFullyLoaded() const { return pluginsFullyLoaded_; }
 
-std::filesystem::path Game::DataPath() const {
-  if (GamePath().empty())
-    throw std::logic_error("Cannot get data path from empty game path");
-  return GamePath() / "Data";
-}
-
 fs::path Game::MasterlistPath() const {
   return lootDataPath_ / u8path(FolderName()) / "masterlist.yaml";
 }
@@ -449,7 +446,6 @@ std::optional<short> Game::GetActiveLoadOrderIndex(
 
 std::vector<std::string> Game::SortPlugins() {
   auto logger = getLogger();
-  std::vector<std::string> plugins = GetInstalledPluginNames();
 
   try {
     gameHandle_->LoadCurrentLoadOrderState();
@@ -470,9 +466,11 @@ std::vector<std::string> Game::SortPlugins() {
     // state that has been changed by sorting.
     ClearMessages();
 
-    sortedPlugins = gameHandle_->SortPlugins(plugins);
+    auto currentLoadOrder = gameHandle_->GetLoadOrder();
 
-    AppendMessages(CheckForRemovedPlugins(plugins, sortedPlugins));
+    sortedPlugins = gameHandle_->SortPlugins(currentLoadOrder);
+
+    AppendMessages(CheckForRemovedPlugins(currentLoadOrder, sortedPlugins));
 
     IncrementLoadOrderSortCount();
   } catch (CyclicInteractionError& e) {

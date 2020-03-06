@@ -31,6 +31,10 @@ along with LOOT.  If not, see
 
 namespace loot {
 namespace test {
+  TEST(mapGameType, shouldConvertMorrowindToGameType) {
+    EXPECT_EQ(GameType::tes3, mapGameType("Morrowind"));
+}
+
 TEST(to_json, shouldEncodeGameSettingsPathsAsUtf8) {
   using std::filesystem::u8path;
 
@@ -96,6 +100,28 @@ TEST(from_json, shouldSetPluginMetadataNonDefaultGroupIfSpecified) {
 
   ASSERT_NE("not default", Group().GetName());
   EXPECT_EQ("not default", pluginMetadata.GetGroup().value());
+}
+
+TEST(to_json, shouldIncludeLanguageFontFamilyIfItExists) {
+  LootSettings::Language language = {"en", "English", "Times New Roman"};
+
+  nlohmann::json json;
+  to_json(json, language);
+
+  EXPECT_EQ(language.locale, json.at("locale"));
+  EXPECT_EQ(language.name, json.at("name"));
+  EXPECT_EQ(language.fontFamily, json.at("fontFamily"));
+}
+
+TEST(to_json, shouldNotIncludeLanguageFontFamilyKeyIfNoFontFamilyIsSpecified) {
+  LootSettings::Language language = {"en", "English", std::nullopt};
+
+  nlohmann::json json;
+  to_json(json, language);
+
+  EXPECT_EQ(language.locale, json.at("locale"));
+  EXPECT_EQ(language.name, json.at("name"));
+  EXPECT_EQ(0, json.count("fontFamily"));
 }
 }
 }

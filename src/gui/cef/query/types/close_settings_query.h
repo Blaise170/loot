@@ -1,7 +1,8 @@
 /*  LOOT
 
-A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-Fallout: New Vegas.
+A load order optimisation tool for
+Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
 Copyright (C) 2014 WrinklyNinja
 
@@ -44,8 +45,11 @@ public:
           "settings object.");
     }
 
+    copyThemeFile();
+
     state_.setDefaultGame(settings_.value("game", ""));
     state_.setLanguage(settings_.value("language", ""));
+    state_.setTheme(settings_.value("theme", "default"));
     state_.enableDebugLogging(settings_.value("enableDebugLogging", false));
     state_.updateMasterlist(settings_.value("updateMasterlist", true));
     state_.enableLootUpdateCheck(
@@ -57,6 +61,27 @@ public:
   }
 
 private:
+  void copyThemeFile() {
+    auto currentTheme = state_.getTheme();
+    auto newTheme = settings_.value("theme", "default");
+    auto currentThemePath = state_.getLootDataPath() / "theme.css";
+
+    if (currentTheme == newTheme) {
+      return;
+    }
+
+    if (std::filesystem::exists(currentThemePath)) {
+      std::filesystem::remove(currentThemePath);
+    }
+
+    if (newTheme != "default") {
+      auto sourceThemePath = state_.getResourcesPath() / "ui" / "css" / std::filesystem::u8path(newTheme + ".theme.css");
+      if (std::filesystem::exists(sourceThemePath)) {
+        std::filesystem::copy_file(sourceThemePath, currentThemePath);
+      }
+    }
+  }
+
   LootState& state_;
   const nlohmann::json settings_;
 };

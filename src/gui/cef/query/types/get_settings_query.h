@@ -1,7 +1,8 @@
 /*  LOOT
 
-A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-Fallout: New Vegas.
+A load order optimisation tool for
+Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
 Copyright (C) 2014 WrinklyNinja
 
@@ -47,11 +48,13 @@ public:
         {"game", settings_.getGame()},
         {"lastVersion", settings_.getLastVersion()},
         {"language", settings_.getLanguage()},
+        {"theme", settings_.getTheme()},
         {"enableDebugLogging", settings_.isDebugLoggingEnabled()},
         {"updateMasterlist", settings_.updateMasterlist()},
         {"enableLootUpdateCheck", settings_.isLootUpdateCheckEnabled()},
         {"games", settings_.getGameSettings()},
         {"filters", settings_.getFilters()},
+        {"languages", settings_.getLanguages()}
     };
 
     return json.dump();

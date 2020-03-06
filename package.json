@@ -19,8 +19,10 @@
     "@polymer/iron-icon": "^3.0.0",
     "@polymer/iron-icons": "^3.0.0",
     "@polymer/iron-iconset-svg": "^3.0.0",
+    "@polymer/iron-input": "^3.0.1",
     "@polymer/iron-list": "^3.0.0",
     "@polymer/iron-pages": "^3.0.0",
+    "@polymer/iron-selector": "^3.0.1",
     "@polymer/neon-animation": "^3.0.0",
     "@polymer/paper-button": "^3.0.0",
     "@polymer/paper-checkbox": "^3.0.0",
@@ -39,16 +41,19 @@
     "@polymer/paper-toast": "^3.0.0",
     "@polymer/paper-toggle-button": "^3.0.0",
     "@polymer/paper-tooltip": "^3.0.0",
-    "@polymer/polymer": "3.0.5",
+    "@polymer/polymer": "^3.0.0",
+    "@types/react": "^16.9.1",
+    "@types/react-autosuggest": "^9.3.10",
+    "@types/react-dom": "^16.8.5",
     "cytoscape": "^3.2.11",
     "cytoscape-dagre": "^2.2.2",
     "cytoscape-edgehandles": "^3.2.3",
     "decompress": "^4.0.0",
-    "fs-extra": "^7.0.0",
+    "fs-extra": "^8.0.0",
     "jed": "^1.1.1",
     "jed-gettext-parser": "^1.0.0",
     "lodash": "^4.17.5",
-    "marked": "^0.6.0",
+    "marked": "^0.7.0",
     "prop-types": "^15.6.2",
     "react": "^16.6.3",
     "react-autosuggest": "^9.3.4",
@@ -63,30 +68,41 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
     "@babel/preset-react": "^7.0.0",
+    "@babel/preset-typescript": "^7.3.3",
+    "@types/cytoscape": "^3.8.0",
+    "@types/jest": "^24.0.16",
+    "@types/lodash": "^4.14.136",
+    "@types/marked": "^0.6.5",
+    "@types/node": "^12.6.9",
+    "@typescript-eslint/eslint-plugin": "^1.13.0",
+    "@typescript-eslint/parser": "^1.13.0",
+    "awesome-typescript-loader": "^5.2.1",
     "babel-core": "^7.0.0-bridge.0",
-    "babel-gettext-extractor": "^3.0.0",
-    "babel-jest": "^23.6.0",
+    "babel-gettext-extractor": "git://github.com/loot/babel-gettext-extractor#v4.1.3+improved-entry-sorting.1",
+    "babel-jest": "^24.0.0",
     "babel-loader": "^8.0.2",
-    "copy-webpack-plugin": "^4.5.0",
+    "copy-webpack-plugin": "^5.0.0",
     "eslint": "^5.5.0",
     "eslint-config-airbnb": "^17.1.0",
-    "eslint-config-prettier": "^3.0.1",
+    "eslint-config-prettier": "^6.0.0",
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jsx-a11y": "^6.1.1",
     "eslint-plugin-prettier": "^3.0.0",
     "eslint-plugin-react": "^7.11.1",
     "html-webpack-plugin": "^3.0.4",
-    "jest": "^23.6.0",
+    "jest": "^24.0.0",
     "mkdirp": "^0.5.1",
     "prettier": "^1.15.1",
     "source-map-loader": "^0.2.3",
+    "ts-jest": "^24.0.2",
+    "typescript": "^3.5.3",
     "webpack": "^4.1.0",
     "webpack-cli": "^3.1.0"
   },
   "scripts": {
     "build": "node ./scripts/get_roboto_files.js && webpack",
     "test": "jest",
-    "lint": "eslint --ignore-path .gitignore --ext .js --ext .jsx ."
+    "lint": "eslint --ignore-path .gitignore --ext .js --ext .jsx --ext .ts --ext .tsx ."
   },
   "babel": {
     "plugins": [
@@ -105,10 +121,12 @@
     ]
   },
   "eslintConfig": {
+    "parser": "@typescript-eslint/parser",
     "parserOptions": {
       "ecmaFeatures": {
         "jsx": true
-      }
+      },
+      "project": "./tsconfig.json"
     },
     "env": {
       "node": true,
@@ -119,6 +137,7 @@
       "loot": false
     },
     "plugins": [
+      "@typescript-eslint",
       "prettier"
     ],
     "settings": {
@@ -126,15 +145,20 @@
         "node": {
           "extensions": [
             ".js",
-            ".jsx"
+            ".jsx",
+            ".ts",
+            ".tsx"
           ]
         }
       }
     },
     "extends": [
       "eslint:recommended",
+      "plugin:@typescript-eslint/eslint-recommended",
+      "plugin:@typescript-eslint/recommended",
       "airbnb",
-      "prettier"
+      "prettier",
+      "prettier/@typescript-eslint"
     ],
     "rules": {
       "curly": [
@@ -157,12 +181,58 @@
       "prettier/prettier": "error",
       "react/destructuring-assignment": 0,
       "react/jsx-one-expression-per-line": 0,
-      "react/sort-comp": 0
+      "react/sort-comp": 0,
+      "@typescript-eslint/no-var-requires": "off",
+      "@typescript-eslint/explicit-function-return-type": [
+        "error",
+        {
+          "allowExpressions": true
+        }
+      ],
+      "no-useless-constructor": "off",
+      "import/no-extraneous-dependencies": [
+        "error",
+        {
+          "devDependencies": [
+            "webpack.config.js",
+            "**/tests/**"
+          ],
+          "optionalDependencies": false
+        }
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "ForInStatement",
+          "message": "for..in loops iterate over the entire prototype chain, which is virtually never what you want. Use Object.{keys,values,entries}, and iterate over the resulting array."
+        },
+        {
+          "selector": "LabeledStatement",
+          "message": "Labels are a form of GOTO; using them makes code confusing and hard to maintain and understand."
+        },
+        {
+          "selector": "WithStatement",
+          "message": "`with` is disallowed in strict mode because it makes code impossible to predict and optimize."
+        }
+      ],
+      "react/jsx-filename-extension": [
+        "error",
+        {
+          "extensions": [
+            ".jsx",
+            ".tsx"
+          ]
+        }
+      ]
     }
   },
   "jest": {
     "collectCoverage": true,
-    "testRegex": "tests/gui/html/js/.+\\.js$"
+    "testRegex": "tests/gui/html/js/.+\\.[jt]sx?$",
+    "transform": {
+      "\\.tsx?$": "ts-jest",
+      "\\.jsx?$": "babel-jest"
+    }
   },
   "prettier": {
     "singleQuote": true

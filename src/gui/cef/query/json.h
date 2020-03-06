@@ -1,7 +1,8 @@
 /*  LOOT
 
-A load order optimisation tool for Oblivion, Skyrim, Fallout 3 and
-Fallout: New Vegas.
+A load order optimisation tool for
+Morrowind, Oblivion, Skyrim, Skyrim Special Edition, Skyrim VR,
+Fallout 3, Fallout: New Vegas, Fallout 4 and Fallout 4 VR.
 
 Copyright (C) 2014 WrinklyNinja
 
@@ -32,6 +33,7 @@ along with LOOT.  If not, see
 #include <loot/api.h>
 
 #include "gui/cef/query/derived_plugin_metadata.h"
+#include "gui/state/loot_settings.h"
 
 namespace loot {
 void testConditionSyntax(const std::string& objectType,
@@ -60,6 +62,8 @@ void validateMessageContents(const std::vector<MessageContent>& contents) {
 }
 
 GameType mapGameType(const std::string& gameType) {
+  if (gameType == GameSettings(GameType::tes3).FolderName())
+    return GameType::tes3;
   if (gameType == GameSettings(GameType::tes4).FolderName())
     return GameType::tes4;
   else if (gameType == GameSettings(GameType::tes5).FolderName())
@@ -242,10 +246,6 @@ void from_json(const nlohmann::json& json, Group& group) {
     throw std::runtime_error("Group object has an empty 'name' value");
   }
 
-  auto condition = json.value("condition", "");
-
-  testConditionSyntax("File", condition);
-
   group = Group(json.at("name"),
     json.value("after", std::unordered_set<std::string>()));
 }
@@ -299,6 +299,14 @@ void from_json(const nlohmann::json& json, GameSettings& game) {
   game.SetRepoBranch(json.value("branch", ""));
   game.SetGamePath(u8path(json.value("path", "")));
   game.SetGameLocalPath(u8path(json.value("localPath", "")));
+}
+
+void to_json(nlohmann::json& json, const LootSettings::Language& language) {
+  json = {{"locale", language.locale}, {"name", language.name}};
+
+  if (language.fontFamily.has_value()) {
+    json["fontFamily"] = language.fontFamily.value();
+  }
 }
 
 nlohmann::json to_json_with_language(const PluginMetadata& metadata,

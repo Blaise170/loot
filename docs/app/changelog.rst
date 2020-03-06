@@ -4,6 +4,129 @@ Version History
 
 Only application history is recorded here. A full history of masterlist changes may be viewed by browsing the GitHub repositories.
 
+0.15.1 - 2019-12-10
+===================
+
+Fixed
+-----
+
+- The "Open Groups Editor" menu item could not be translated (this wasn't
+  properly fixed in v0.15.0).
+- The changelog for the 0.15.0 release was missing.
+
+0.15.0 - 2019-12-10
+===================
+
+Fixed
+-----
+
+- The "Open Groups Editor" menu item could not be translated.
+- The "Open Groups Editor" menu item was not disabled if game loading failed.
+- LOOT would fail to select a game if the preferred game was not installed but
+  another game was.
+- LOOT was unable to extract versions from plugin descriptions containing
+  ``version:`` followed by whitespace and one or more digits. Via libloot.
+- LOOT did not error if masterlist metadata defined a group that loaded after
+  another group that was not defined in the masterlist, but which was defined in
+  user metadata. This was unintentional, and now all groups mentioned in
+  masterlist metadata must now be defined in the masterlist. Via libloot.
+
+Changed
+-------
+
+- The GUI is now better at handling initialisation failures.
+- The "Add New Row" icon button in editable tables has been replaced by
+  text-only button, and its implementation tweaked to reduce the chance of
+  breakage.
+- The range of FormIDs that are recognised as valid in light masters has been
+  extended for Fallout 4 plugins, from between ``0x800`` and ``0xFFF`` inclusive
+  to between ``0x001`` and ``0xFFF`` inclusive, to reflect the extended range
+  supported by Fallout 4 v1.10.162.0.0. The valid range for Skyrim Special
+  Edition plugins is unchanged. Via libloot.
+- LOOT now supports v0.15 of the metadata syntax. Via libloot.
+- Updated the German translation.
+- Updated libloot to v0.15.1.
+- Updated nlohmann/json to v3.7.3.
+- Updated spdlog to v1.4.2.
+
+Removed
+-------
+
+- The ability to specify the HTML file URL to load as a CLI parameter, as it
+  could cause users to see a white screen on launch if they ran LOOT with an
+  unrecognised CLI parameter.
+
+0.14.6 - 2019-09-28
+===================
+
+Added
+-----
+
+- Support for TES III: Morrowind.
+- Support for selecting a theme in LOOT's settings dialog, making it easier to
+  use the dark theme that LOOT has bundled since v0.9.2.
+- Support for specifying a font family to use per language, so that different
+  languages can use different fonts. The default font families are ``Roboto,
+  Noto, sans-serif``. Korean prefixes this with Malgun Gothic, Chinese with
+  Microsoft Yahei, and Japanese with Meiryo. Font families are specified in the
+  new ``languages`` table in LOOT's ``settings.toml``.
+
+Fixed
+-----
+
+- Regular expressions in condition strings are now prefixed with ``^`` and
+  suffixed with ``$`` before evaluation to ensure that only exact matches to the
+  given expression are found. Via libloot.
+- LOOT's taskbar icon would sometimes be displayed with a black bar down its
+  left side.
+
+Changed
+-------
+
+- The languages that LOOT supports are no longer hardcoded: the list is now read
+  from the new ``languages`` table in LOOT's ``settings.toml``. A supported
+  language is expected to have a Gettext MO file at
+  ``resources/l10n/<ISO code>/LC_MESSAGES/loot.mo``, relative to ``LOOT.exe``.
+- Updated libloot to v0.14.10.
+- Updated nlohmann/json to v3.7.0.
+- Updated JS package dependencies.
+
+0.14.5 - 2019-07-04
+===================
+
+Fixed
+-----
+
+- Filename comparisons implemented case-insensitivity incorrectly, which caused
+  LOOT to not properly recognise some files, depending on the characters in
+  their filename and the current locale. On Windows, LOOT now implements
+  case-insensitivity using the same case folding rules as Windows itself. On
+  Linux, LOOT uses the locale-independent case folding rules provided by the ICU
+  library, which are very similar but not identical to the rules used by
+  Windows.
+- Evaluating `version()` and `product_version()` conditions will no longer error
+  if the given executable has no version fields. Instead, it will be evaluated
+  as having no version. Via libloot.
+- Sorting would not preserve the existing relative positions of plugins that had
+  no relative positioning enforced by plugin data or metadata, if one or both of
+  their filenames were not case-sensitively equal to their entries in
+  plugins.txt / loadorder.txt. Load order position comparison is now correctly
+  case-insensitive. Via libloot.
+
+Changed
+-------
+
+- Improved load order sorting performance.
+- Game names and game folder names are now handled case-sensitively to avoid
+  unnecessary and possibly incorrect case folding.
+- Updated libloot to v0.14.8.
+- Downgraded CEF to v3.3440.1806.g65046b7, as the hashes for
+  v74.1.16+ge20b240+chromium-74.0.3729.131 kept changing unexpectedly, causing
+  builds to fail.
+- Updated the German translation.
+- Updated the Japanese translation.
+- Updated the Russian translation.
+
 0.14.4 - 2019-05-11
 ===================
 
